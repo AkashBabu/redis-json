@@ -1,0 +1,34 @@
+{
+  "name": "redis-json",
+  "version": "1.0.0",
+  "description": "A wrapper library to store JSON Objects in redis-hashsets and retrieve it back as JSON objects",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AkashBabu/redis-json.git"
+  },
+  "keywords": [
+    "redis",
+    "json",
+    "store",
+    "retrieve",
+    "save",
+    "insert",
+    "hashset"
+  ],
+  "author": "Akash Babu <001akashbabu@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AkashBabu/redis-json/issues"
+  },
+  "homepage": "https://github.com/AkashBabu/redis-json#readme",
+  "dependencies": {
+    "flat": "^2.0.1"
+  },
+  "devDependencies": {
+    "ioredis": "^2.4.0"
+  }
+}
