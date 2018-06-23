@@ -48,7 +48,8 @@
             "devDependencies": [
               "test/**/*.js"
             ]
-        }]
+        }],
+        "no-plusplus": 0
     },
     "env": {
         "node": true,
