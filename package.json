@@ -4,10 +4,12 @@
     "description": "Template for Nodejs libraries",
     "main": "dist/index.js",
     "scripts": {
-        "test": "export NODE_ENV=test && mocha --require babel-core/register --require babel-polyfill test/**/*.test.js --exit",
-        "test:dev": "export NODE_ENV=test &&  mocha --require babel-core/register --require babel-polyfill test/**/*.test.js",
+        "_test": "mocha --require babel-core/register --require babel-polyfill test/**/*.test.js",
+        "_test:exit": "npm run _test -- --exit",
+        "test": "export NODE_ENV=test && npm run _test:exit",
+        "test:dev": "export NODE_ENV=test &&  npm run _test",
+        "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
         "build": "$(npm bin)/rimraf dist/ && $(npm bin)/babel src --out-dir dist",
-        "coverage": "export NODE_ENV=test && nyc mocha --require babel-core/register --require babel-polyfill test.js --exit",
         "lint": "$(npm bin)/eslint --config .eslintrc src/index.js"
     },
     "repository": {
