@@ -21,3 +21,6 @@ This command removes dist/ folder and builds it from the contents in src/ folder
 
 ## Coverage Report
 > npm run coverage
+
+## Benchmark
+> npm run benchmark
