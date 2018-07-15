@@ -7,6 +7,8 @@ This package includes the following:
 - Mocha & chai
 - Coverage Report (nyc)
 
+## Installation
+> npm i lib -S
 
 ## ES-Lint
 > npm run lint
