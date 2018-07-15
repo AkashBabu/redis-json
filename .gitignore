@@ -65,3 +65,4 @@ package-lock.json
 
 # VSCode 
 sample.launch.json
+.vscode/
