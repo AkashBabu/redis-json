@@ -4,5 +4,7 @@
     ],
     "plugins": [
         "transform-runtime"
-    ]
+    ],
+    "retainLines": true,
+    "sourceMaps": true
 }

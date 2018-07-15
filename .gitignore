@@ -62,3 +62,6 @@ typings/
 
 # package lock
 package-lock.json
+
+# VSCode 
+sample.launch.json

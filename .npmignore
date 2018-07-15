@@ -6,3 +6,4 @@ test/
 .travis.yml
 .nyc_output/
 benchmark/
+sample.launch.json
