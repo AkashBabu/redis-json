@@ -11,7 +11,8 @@
         "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
         "build": "$(npm bin)/rimraf dist/ && $(npm bin)/babel src --out-dir dist",
         "lint": "$(npm bin)/eslint --config .eslintrc src/index.js",
-        "benchmark": "babel-node benchmark/"
+        "benchmark": "babel-node benchmark/",
+        "status": "git status"
     },
     "repository": {
         "type": "git",
@@ -28,7 +29,8 @@
         "lint",
         "coverage",
         "build",
-        "benchmark"
+        "benchmark",
+        "status"
     ],
     "devDependencies": {
         "babel-cli": "^6.26.0",
