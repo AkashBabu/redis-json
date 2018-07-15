@@ -46,7 +46,8 @@
         "mocha/no-exclusive-tests": "error",
         "import/no-extraneous-dependencies": ["error", {
             "devDependencies": [
-              "test/**/*.js"
+              "test/**/*.js",
+              "benchmark/**/*.js"
             ]
         }],
         "no-plusplus": 0,
