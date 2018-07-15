@@ -8,3 +8,4 @@ test/
 benchmark/
 sample.launch.json
 .vscode/
+.codeclimate.yml
