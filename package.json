@@ -8,6 +8,7 @@
         "_test:exit": "npm run _test -- --exit",
         "test": "export NODE_ENV=test && npm run _test:exit",
         "test:dev": "export NODE_ENV=test &&  npm run _test -- -w",
+        "test:grep": "export NODE_ENV=test &&  npm run _test -- -g ",
         "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
         "build": "rimraf dist/ && babel src --out-dir dist",
         "lint": "eslint --config .eslintrc src/index.js",
