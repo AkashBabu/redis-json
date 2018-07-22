@@ -7,7 +7,7 @@
         "_test": "mocha --require babel-core/register --require babel-polyfill test/**/*.test.js",
         "_test:exit": "npm run _test -- --exit",
         "test": "export NODE_ENV=test && npm run _test:exit",
-        "test:dev": "export NODE_ENV=test &&  npm run _test",
+        "test:dev": "export NODE_ENV=test &&  npm run _test -- -w",
         "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
         "build": "rimraf dist/ && babel src --out-dir dist",
         "lint": "eslint --config .eslintrc src/index.js",
