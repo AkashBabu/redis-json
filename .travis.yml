@@ -6,6 +6,9 @@ node_js:
   - "9"
   - "10"
 
+services:
+  - "redis-server"
+
 branches:
   only:
     - master
