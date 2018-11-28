@@ -4,11 +4,22 @@
   "description": "A wrapper library to store JSON Objects in redis-hashsets and retrieve it back as JSON objects",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js"
+    "_test": "mocha test.js",
+    "_test:exit": "npm run _test -- --exit",
+    "test": "export NODE_ENV=test && npm run _test:exit",
+    "test:dev": "export NODE_ENV=test &&  npm run _test -- -w",
+    "test:grep": "export NODE_ENV=test &&  npm run _test -- -g ",
+    "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
+    "lint": "eslint --config .eslintrc src/index.js",
+    "status": "git status",
+    "prettify": "prettier --write index.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AkashBabu/redis-json.git"
+  },
+  "engines": {
+    "node": ">=7.0.0"
   },
   "keywords": [
     "redis",
@@ -18,6 +29,12 @@
     "save",
     "insert",
     "hashset"
+  ],
+  "precommit": [
+    "prettify",
+    "lint",
+    "coverage",
+    "status"
   ],
   "author": "Akash Babu <001akashbabu@gmail.com>",
   "license": "MIT",
@@ -29,6 +46,22 @@
     "flat": "^2.0.1"
   },
   "devDependencies": {
-    "ioredis": "^2.4.0"
+    "chai": "^4.1.2",
+    "debug": "^4.1.0",
+    "deep-equal": "^1.0.1",
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb": "^14.1.0",
+    "eslint-plugin-class-property": "^1.0.6",
+    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-jsx-a11y": "^4.0.0",
+    "eslint-plugin-mocha": "^5.0.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-react": "^6.9.0",
+    "ioredis": "^2.4.0",
+    "mocha": "^5.2.0",
+    "nodemon": "^1.18.3",
+    "nyc": "^12.0.2",
+    "pre-commit": "^1.2.2",
+    "prettier": "^1.15.2"
   }
 }

@@ -1,63 +1,57 @@
+const flatten = require("flat");
+const unflatten = require("flat").unflatten;
 
+class JSONCache {
+  /**
+   * Intializes JSONStore instance
+   * @param {RedisClient} redisClient
+   *
+   * @constructor
+   */
+  constructor(redisClient) {
+    this.redisClient = redisClient;
+  }
 
+  /**
+   * Flattens the given json object and
+   * stores it in Redis hashset
+   *
+   * @param {String} key Redis key
+   * @param {Object} obj JSON object to be stored
+   */
+  set(key, obj) {
+    const flattened = flatten(obj);
 
+    return this.redisClient.hmset.call(this.redisClient, key, flattened);
+  }
 
+  /**
+   * Retrieves the hashset from redis and
+   * unflattens it back to the original Object
+   *
+   * @param {String} key Redis key
+   *
+   * @returns {Object}
+   */
+  async get(key) {
+    const flattened = await this.redisClient.hgetall.call(
+      this.redisClient,
+      key
+    );
+    return unflatten(flattened);
+  }
+  // async get(key) {
+  // }
 
-
-
-
-
-
-var flatten = require('flat');
-var unflatten = require('flat').unflatten;
-
-var JSONStore = function (redis) {
-    this.redis = redis;
-
-    return this;
+  /**
+   *
+   * @param {String} key Redis key
+   * @param {String} obj JSON Object
+   */
+  async rewrite(key, obj) {
+    await this.redisClient.del.call(this.redisClient, key);
+    this.set(key, obj);
+  }
 }
 
-JSONStore.prototype.resave = function (key, jsonObj, done) {
-    var self = this;
-    this.redis.del(key, function (err, result) {
-        if (err) {
-            done(err);
-        } else {
-            self.set(key, jsonObj, done);
-        }
-    })
-}
-
-JSONStore.prototype.set = function (key, jsonObj, done) {
-    var obj = flatten(jsonObj);
-    var keyValArr = [];
-
-    keyValArr.push(key);
-
-    for (var key in obj) {
-        keyValArr.push(key);
-        keyValArr.push(obj[key]);
-    }
-    keyValArr.push(done);
-
-    this.redis.hmset.apply(this.redis, keyValArr);
-}
-
-JSONStore.prototype.get = function (key, done) {
-    this.redis.hgetall(key, function (err, result) {
-
-        if (result) {
-            done(null, unflatten(result));
-        } else if (!err) {
-            done(null, {});
-        } else {
-            done(err, null);
-        }
-    })
-}
-
-module.exports = JSONStore;
-
-
-
-
+module.exports = JSONCache;

@@ -1,0 +1,9 @@
+.eslintrc
+.babelrc
+README.md
+test.js
+.travis.yml
+.nyc_output/
+sample.launch.json
+.vscode/
+.codeclimate.yml
