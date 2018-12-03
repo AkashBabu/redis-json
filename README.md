@@ -50,10 +50,11 @@ console.log(response)
 
 ### API
 
-**set(key, jsobObject): \<Promise>**
+**set(key, jsobObject, options): \<Promise>**
 
 *key*: The redis key that the JSON object has to be stored against.  
 *jsonObject*: JSON obejct that needs to be stored.  
+*options.expire*: Max time-to-live before key expiry
 
 if the key already exists, and is of type hashset, then the field in JSON object will get updated along with the existing data.
 

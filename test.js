@@ -3,6 +3,7 @@ const Redis = require('ioredis')
 const redis = new Redis({ dropBufferSupport: true })
 const {expect} = require('chai')
 const deepEq = require('deep-equal')
+const delay = require('delay')
 
 const jsonCache = new JSONCache(redis)
 
@@ -28,12 +29,14 @@ describe('redis-json', () => {
   })
 
   it('should not replace other properties when set is used', async () => {
-    await jsonCache.set('123', {another: 'value'})
+    const extra = {another: 'value'}
+    await jsonCache.set('123', extra)
     await jsonCache.set('123', testObj)
 
     const response = await jsonCache.get('123')
-    expect(response).to.have.property('another')
-    expect(response).to.have.property('name')
+    expect(deepEq(response, Object.assign(testObj, extra)))
+    // expect(response).to.have.property('another')
+    // expect(response).to.have.property('name')
   })
 
   it('should retreive the JSON object in the same shape as was saved', async ()=> {
@@ -50,5 +53,16 @@ describe('redis-json', () => {
     
     const response = await jsonCache.get('123')
     expect(deepEq(testObj, response)).to.be.true
+  })
+
+  it('should expire the keys after the given expiry time', async () => {
+    await jsonCache.set('123', Object.assign(testObj, {another: 'value'}), {
+      expire: 1
+    })
+    
+    await delay(1010);
+
+    const response = await jsonCache.get('123')
+    expect(response).to.not.exist
   })
 })
