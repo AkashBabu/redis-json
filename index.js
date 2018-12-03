@@ -15,7 +15,7 @@ class JSONCache {
   /**
    * Flattens the given json object and
    * stores it in Redis hashset
-   * 
+   *
    * @param {String} key Redis key
    * @param {Object} obj JSON object to be stored
    * @param {Options} options
@@ -26,12 +26,13 @@ class JSONCache {
   async set(key, obj, options = {}) {
     const flattened = flatten(obj);
 
-    // Custom property to check 
+    // Custom property to check
     // if the hashset has expired
-    flattened._present = 1
+    flattened._present = 1;
 
-    await this.redisClient.hmset.call(this.redisClient, key, flattened)
-    if(options.expire) await this.redisClient.expire.call(this.redisClient, key, options.expire)
+    await this.redisClient.hmset.call(this.redisClient, key, flattened);
+    if (options.expire)
+      await this.redisClient.expire.call(this.redisClient, key, options.expire);
   }
 
   /**
@@ -49,14 +50,14 @@ class JSONCache {
     );
 
     // Remove the custom property
-    delete flattened._present
+    delete flattened._present;
 
-    return Object.keys(flattened).length ? unflatten(flattened) : undefined
+    return Object.keys(flattened).length ? unflatten(flattened) : undefined;
   }
 
   /**
    * Replace the entire hashset for the given key
-   * 
+   *
    * @param {String} key Redis key
    * @param {String} obj JSON Object
    */
