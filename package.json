@@ -1,6 +1,6 @@
 {
   "name": "redis-json",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A wrapper library to store JSON Objects in redis-hashsets and retrieve it back as JSON objects",
   "main": "index.js",
   "scripts": {
