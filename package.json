@@ -12,7 +12,7 @@
     "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
     "lint": "eslint --config .eslintrc src/index.js",
     "status": "git status",
-    "prettify": "prettier --write index.js"
+    "lint:fix": "npm run lint -- --fix"
   },
   "repository": {
     "type": "git",
@@ -31,7 +31,7 @@
     "hashset"
   ],
   "precommit": [
-    "prettify",
+    "lint:fix",
     "lint",
     "coverage",
     "status"
