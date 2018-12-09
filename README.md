@@ -1,15 +1,15 @@
 # redis-json [![Build Status](https://travis-ci.com/AkashBabu/redis-json.svg?branch=master)](https://travis-ci.com/AkashBabu/redis-json)
 Nodejs library to store/retreive JSON Objects in RedisDB
 
-### Description
+## Description
 Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis just like a normal hashset, on `get` the hashset is unflattened and converted back to the original JSON object.  
 Under the hood it uses [flat](https://www.npmjs.com/package/flat) library for flattening and unflattening JSON objects
 
-### Installation
+## Installation
 
 > npm i redis-json -D
 
-### Usage 
+## Usage 
 
 ```js
 const Redis = require('ioredis');
@@ -17,7 +17,7 @@ const redis = new Redis();
 
 const JSONCache = require('redis-json');
 
-const jsonCache = new JSONCache(redis);
+const jsonCache = new JSONCache(redis, {prefix: 'cache:'});
 
 const user = {
   name: 'redis-json',
@@ -48,7 +48,16 @@ console.log(response)
 
 ```
 
-### API
+## API
+### Constructor
+**JSONCache(redisClient, options)**
+
+*redisClient*: RedisClient instance(Preferred ioredis - cient). It support any redisClient instance that has `set, get & del` methods implemented
+
+*options.prefix*: Prefix for redis keys. Defaults to `jc:` (jsonCache)
+
+
+### Methods
 
 **set(key, jsobObject, options): \<Promise>**
 
@@ -66,7 +75,7 @@ if the key already exists, and is of type hashset, then the field in JSON object
 Note: if the key is not of type hashset, then redis will through error.
 
 
-**~~resave~~ rewrite(key, jsonObj)**
+**~~resave~~ rewrite(key, jsonObj): \<Promise>**
 
 *key*: The redis key that whose value needs to be replaced with the new one.
 *jsonObject*: JSON obejct that needs to be stored.  

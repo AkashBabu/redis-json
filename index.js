@@ -1,5 +1,5 @@
-const flatten = require("flat");
-const unflatten = require("flat").unflatten;
+const flatten = require('flat')
+const unflatten = flatten.unflatten
 
 class JSONCache {
   /**
@@ -8,8 +8,13 @@ class JSONCache {
    *
    * @constructor
    */
-  constructor(redisClient) {
+  constructor(redisClient, { prefix = 'jc:' } = {}) {
     this.redisClient = redisClient;
+    this.prefix = prefix
+  }
+
+  getKey(key) {
+    return `${this.prefix}${key}`
   }
 
   /**
@@ -25,14 +30,10 @@ class JSONCache {
    */
   async set(key, obj, options = {}) {
     const flattened = flatten(obj);
-
-    // Custom property to check
-    // if the hashset has expired
-    flattened._present = 1;
-
-    await this.redisClient.hmset.call(this.redisClient, key, flattened);
+    
+    await this.redisClient.hmset.call(this.redisClient, this.getKey(key), flattened);
     if (options.expire)
-      await this.redisClient.expire.call(this.redisClient, key, options.expire);
+      await this.redisClient.expire.call(this.redisClient, this.getKey(key), options.expire);
   }
 
   /**
@@ -46,11 +47,8 @@ class JSONCache {
   async get(key) {
     const flattened = await this.redisClient.hgetall.call(
       this.redisClient,
-      key
+      this.getKey(key)
     );
-
-    // Remove the custom property
-    delete flattened._present;
 
     return Object.keys(flattened).length ? unflatten(flattened) : undefined;
   }
@@ -62,8 +60,8 @@ class JSONCache {
    * @param {String} obj JSON Object
    */
   async rewrite(key, obj) {
-    await this.redisClient.del.call(this.redisClient, key);
-    return this.set(key, obj);
+    await this.redisClient.del.call(this.redisClient, this.getKey(key));
+    await this.set(key, obj);
   }
 }
 

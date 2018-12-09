@@ -1,3 +1,6 @@
+# v2.2.0
+* Support for redis prefix keys
+
 # v2.1.0
 * Support for key expiry
 
