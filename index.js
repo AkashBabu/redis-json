@@ -70,7 +70,9 @@ class JSONCache {
    */
   async clearAll() {
     const keys = await this.redisClient.keys.call(this.redisClient, `${this.prefix}*`)
-    await Promise.all(keys.map(k => this.redisClient.del.call(this.redisClient, k)))
+
+    // Multi command for efficiently all the keys at once
+    await this.redisClient.multi(keys.map(k => ['del', k])).exec()
   }
 }
 

@@ -1,6 +1,7 @@
 const JSONCache = require('.')
 const Redis = require('ioredis')
 const redis = new Redis({ dropBufferSupport: true })
+
 const { expect } = require('chai')
 const deepEq = require('deep-equal')
 const delay = require('delay')
@@ -36,9 +37,15 @@ const testObj = {
 
 describe('redis-json', () => {
 
+  before(async () => {
+    const multi = redis.multi([["del", "name"]])
+    await multi.exec()
+
+  })
+
   // Clear only the prefixed keys
   before(jsonCache.clearAll.bind(jsonCache))
-  
+
   // Clear only the prefixed keys
   after(jsonCache.clearAll.bind(jsonCache))
 
@@ -59,7 +66,7 @@ describe('redis-json', () => {
     await jsonCache.set('3', testObj)
 
     const response = await jsonCache.get('3')
-    
+
     expect(deepEq(testObj, response)).to.be.true
   })
 
@@ -84,16 +91,16 @@ describe('redis-json', () => {
   })
 
   it('should support prefix for the store object', async () => {
-    const obj = {[(Math.random() * 100).toString()]: (Math.random() * 1000).toString()}
+    const obj = { [(Math.random() * 100).toString()]: (Math.random() * 1000).toString() }
     await jsonCache.set('6', obj)
 
     const redisData = await redis.hgetall(`${jsonCache.prefix}6`)
-    
+
     expect(deepEq(redisData, obj)).to.be.true
   })
 
   it('should remove all the keys on clearAll', async () => {
-    const obj = {a: 1}
+    const obj = { a: 1 }
     await jsonCache.set('7', obj)
 
     await jsonCache.clearAll()
