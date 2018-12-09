@@ -42,7 +42,7 @@ class JSONCache {
    *
    * @param {String} key Redis key
    *
-   * @returns {Object}
+   * @returns {Promise<Object>}
    */
   async get(key) {
     const flattened = await this.redisClient.hgetall.call(
@@ -62,6 +62,15 @@ class JSONCache {
   async rewrite(key, obj) {
     await this.redisClient.del.call(this.redisClient, this.getKey(key));
     await this.set(key, obj);
+  }
+
+  /**
+   * Removes/deletes all the keys in the JSON Cache,
+   * having the prefix.
+   */
+  async clearAll() {
+    const keys = await this.redisClient.keys.call(this.redisClient, `${this.prefix}*`)
+    await Promise.all(keys.map(k => this.redisClient.del.call(this.redisClient, k)))
   }
 }
 

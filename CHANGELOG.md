@@ -1,3 +1,6 @@
+# v2.3.0
+* Added `clearAll` method, which clears all the cached Json
+
 # v2.2.0
 * Support for redis prefix keys
 

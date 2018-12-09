@@ -35,16 +35,12 @@ const testObj = {
 }
 
 describe('redis-json', () => {
-  async function clearKeys() {
-    const keys = await redis.keys(`${jsonCache.prefix}*`)
-    await Promise.all(keys.map(k => redis.del(k)))
-  }
+
+  // Clear only the prefixed keys
+  before(jsonCache.clearAll.bind(jsonCache))
   
   // Clear only the prefixed keys
-  before(clearKeys)
-  
-  // Clear only the prefixed keys
-  after(clearKeys)
+  after(jsonCache.clearAll.bind(jsonCache))
 
   it('should save json object without any error', async () => {
     await jsonCache.set('1', testObj)
@@ -89,10 +85,21 @@ describe('redis-json', () => {
 
   it('should support prefix for the store object', async () => {
     const obj = {[(Math.random() * 100).toString()]: (Math.random() * 1000).toString()}
-    await jsonCache.set(6, obj)
+    await jsonCache.set('6', obj)
 
     const redisData = await redis.hgetall(`${jsonCache.prefix}6`)
     
     expect(deepEq(redisData, obj)).to.be.true
+  })
+
+  it('should remove all the keys on clearAll', async () => {
+    const obj = {a: 1}
+    await jsonCache.set('7', obj)
+
+    await jsonCache.clearAll()
+
+    const keys = await redis.keys(`${jsonCache.prefix}*`)
+    expect(keys).to.have.length(0)
+
   })
 })

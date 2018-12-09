@@ -52,7 +52,7 @@ console.log(response)
 ### Constructor
 **JSONCache(redisClient, options)**
 
-*redisClient*: RedisClient instance(Preferred ioredis - cient). It support any redisClient instance that has `set, get & del` methods implemented
+*redisClient*: RedisClient instance(Preferred ioredis - cient). It support any redisClient instance that has `keys, set, get & del` methods implemented
 
 *options.prefix*: Prefix for redis keys. Defaults to `jc:` (jsonCache)
 
@@ -81,6 +81,11 @@ Note: if the key is not of type hashset, then redis will through error.
 *jsonObject*: JSON obejct that needs to be stored.  
 
 Even if key is not of type hashset, ~~resave~~ rewrite will delete it and update the JSON object in the provided key.
+
+**clearAll(): \<Promise>**
+
+Clears/removes all the keys with the prefix from redis.  
+Useful when trying to refresh the entire cache.
 
 ## Mocha & Chai (Testing)
 > npm test
