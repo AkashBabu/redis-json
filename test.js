@@ -20,15 +20,15 @@ const jsonCache = new JSONCache(redis)
 // }
 
 const testObj = {
-  "_id": "5c0bf503712cbe5144b0614c",
+  "_id": "asdf",
   "ctime": "2018-12-08T16:44:24.981Z",
   "name": "test",
   "empId": "123",
-  "pwd": "$2b$08$mUrKnOn8zEMGYv8hSPZXiOeBc.5RU5ulJz5MFqSNwoNbK.iwI89Gy",
+  "pwd": "ghjk",
   "dob": "1991-11-01T00:00:00Z",
   "role": 0,
   "jtis": {
-    "zunLjUrEC": {
+    "jkl": {
       "exp": 1544892291851
     }
   },
@@ -108,5 +108,18 @@ describe('redis-json', () => {
     const keys = await redis.keys(`${jsonCache.prefix}*`)
     expect(keys).to.have.length(0)
 
+  })
+
+  it('should retrieve only the requested fields', async () => {
+    await jsonCache.set('8', testObj)
+    
+    const keys = Object.keys(testObj).slice(0, 2)
+    const retreived = await jsonCache.get('8', ...keys)
+
+    expect(Object.keys(retreived)).to.have.all.members(keys)
+
+    keys.forEach(k => {
+      expect(retreived[k] == testObj[k]).to.be.true
+    })
   })
 })

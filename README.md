@@ -46,6 +46,14 @@ console.log(response)
 //   cars: ['BMW 520i', 'Audo A8']
 // }
 
+const response = await jsonCache.get('123', 'name', 'age');
+// output
+// {
+//   name: 'redis-json',
+//   age: 25,
+// }
+
+
 ```
 
 ## API
@@ -68,9 +76,10 @@ console.log(response)
 if the key already exists, and is of type hashset, then the field in JSON object will get updated along with the existing data.
 
 
-**get(key) \<Promise>**
+**get(key, ...fields) \<Promise>**
 
-*key*: The redis key in which the JSON object was stored.
+*key*: The redis key in which the JSON object was stored.  
+*fields(optional) [New in v2.4.0]*: List of field to be retrieved from the given key. This can be used if the stored object is large and hence helps to reduce Network latency.
 
 Note: if the key is not of type hashset, then redis will through error.
 
@@ -86,6 +95,9 @@ Even if key is not of type hashset, ~~resave~~ rewrite will delete it and update
 
 Clears/removes all the keys with the prefix from redis using `multi` command.  
 Useful when trying to refresh the entire cache.
+
+## Changelogs
+For detailed ChangeLogs please refer [this](https://github.com/AkashBabu/redis-json/blob/master/CHANGELOG.md)
 
 ## Mocha & Chai (Testing)
 > npm test

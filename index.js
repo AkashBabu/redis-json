@@ -41,16 +41,27 @@ class JSONCache {
    * unflattens it back to the original Object
    *
    * @param {String} key Redis key
+   * @param {...String} fields List of fields to be retreived from redis.
+   *    This helps reduce network latency incase only a few fields are
+   *    needed.
    *
    * @returns {Promise<Object>}
    */
-  async get(key) {
-    const flattened = await this.redisClient.hgetall.call(
+  async get(key, ...fields) {
+    const result = await this.redisClient[fields.length > 0 ? 'hmget' : 'hgetall'].call(
       this.redisClient,
-      this.getKey(key)
+      this.getKey(key),
+      ...fields
     );
 
-    return Object.keys(flattened).length ? unflatten(flattened) : undefined;
+    if(fields.length > 0) {
+      return fields.reduce((res, field, i) => {
+        res[field] = result[i]
+        return res;
+      }, {})
+    }
+
+    return Object.keys(result).length ? unflatten(result) : undefined;
   }
 
   /**
