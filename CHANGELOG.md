@@ -1,4 +1,4 @@
-#2.4.0
+# v2.4.0
 * Support for querying only the required fields of the object
 
 # v2.3.0
