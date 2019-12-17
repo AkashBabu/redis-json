@@ -27,7 +27,7 @@ export default [
     input: 'src/index.ts',
     output: { file: 'lib/jsonCache.js', format: 'cjs', indent: false },
     external: [
-      ...Object.keys(pkg.devDependencies || {}),
+      // ...Object.keys(pkg.devDependencies || {}),
       ...Object.keys(pkg.peerDependencies || {})
     ],
     plugins: [
@@ -47,7 +47,7 @@ export default [
     input: 'src/index.ts',
     output: { file: 'es/jsonCache.js', format: 'es', indent: false },
     external: [
-      ...Object.keys(pkg.devDependencies || {}),
+      // ...Object.keys(pkg.devDependencies || {}),
       ...Object.keys(pkg.peerDependencies || {})
     ],
     plugins: [
