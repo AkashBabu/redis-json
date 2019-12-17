@@ -1,10 +1,14 @@
 language: node_js
 
-node_js: 
-  - "7"
-  - "8"
-  - "9"
-  - "10"
+os:
+  - linux
+  # - osx
+  # - windows
+
+node_js:
+  - 8
+  - 9
+  - 10
 
 services:
   - "redis-server"
@@ -13,12 +17,14 @@ branches:
   only:
     - master
 
-
 install:
-  - npm install
+  - npm i
 
 script:
-  - npm test
+  - npm run lint
+  - npm run test
+  - npm run build
+  - npm run coveralls
 
 notifications:
   email:

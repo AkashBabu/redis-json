@@ -1,3 +1,8 @@
+# v3.0.0
+* Usage of typescript
+* Better seggregation of files
+* Bug fix for handling empty object and empty array
+
 # v2.4.0
 * Support for querying only the required fields of the object
 

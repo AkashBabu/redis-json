@@ -2,24 +2,33 @@
   "name": "redis-json",
   "version": "2.4.0",
   "description": "A wrapper library to store JSON Objects in redis-hashsets and retrieve it back as JSON objects",
-  "main": "index.js",
+  "sideEffects": false,
+  "main": "lib/jsonCache.js",
+  "unpkg": "dist/dll.js",
+  "module": "es/dll.js",
+  "typings": "types/src/index.d.ts",
   "scripts": {
-    "_test": "mocha test.js",
+    "_test": "cross-env TS_NODE_FILES=true mocha --require ts-node/register test/**/*.spec.ts",
     "_test:exit": "npm run _test -- --exit",
-    "test": "export NODE_ENV=test && npm run _test:exit",
-    "test:dev": "export NODE_ENV=test &&  npm run _test -- -w",
-    "test:grep": "export NODE_ENV=test &&  npm run _test -- -g ",
-    "coverage": "export NODE_ENV=test && nyc -- npm run _test:exit",
-    "lint": "eslint --config .eslintrc src/index.js",
+    "test": "cross-env NODE_ENV=test npm run _test:exit",
+    "test:dev": "cross-env NODE_ENV=test npm run _test -- -w",
+    "test:grep": "cross-env NODE_ENV=test npm run _test:exit -- -g ",
+    "coverage": "nyc npm run test",
+    "lint:fix": "tslint --fix --config tslint.json src/index.ts",
+    "lint": "tslint --config tslint.json src/index.ts",
+    "tsc:build": "tsc",
+    "rollup:build": "rollup -c",
+    "build": "npm run tsc:build && npm run rollup:build",
+    "pack": "npm run build && npm pack",
     "status": "git status",
-    "lint:fix": "npm run lint -- --fix"
+    "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AkashBabu/redis-json.git"
   },
   "engines": {
-    "node": ">=7.0.0"
+    "node": ">=8.0.0"
   },
   "keywords": [
     "redis",
@@ -34,35 +43,61 @@
     "lint:fix",
     "lint",
     "coverage",
+    "build",
     "status"
   ],
+  "nyc": {
+    "extension": [
+      ".ts"
+    ],
+    "exclude": [
+      "**/*.d.ts"
+    ],
+    "include": [
+      "src/**/*"
+    ]
+  },
   "author": "Akash Babu <001akashbabu@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/AkashBabu/redis-json/issues"
   },
   "homepage": "https://github.com/AkashBabu/redis-json#readme",
-  "dependencies": {
-    "flat": "^2.0.1"
-  },
   "devDependencies": {
+    "@babel/core": "^7.7.2",
+    "@babel/preset-env": "^7.7.1",
+    "@babel/preset-typescript": "^7.7.2",
+    "@rollup/plugin-replace": "^2.2.1",
+    "@types/chai": "^4.2.3",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.7.12",
     "chai": "^4.1.2",
-    "debug": "^4.1.0",
-    "deep-equal": "^1.0.1",
-    "delay": "^4.1.0",
-    "eslint": "^3.19.0",
-    "eslint-config-airbnb": "^14.1.0",
-    "eslint-plugin-class-property": "^1.0.6",
-    "eslint-plugin-import": "^2.12.0",
-    "eslint-plugin-jsx-a11y": "^4.0.0",
-    "eslint-plugin-mocha": "^5.0.0",
-    "eslint-plugin-node": "^6.0.1",
-    "eslint-plugin-react": "^6.9.0",
-    "ioredis": "^2.4.0",
-    "mocha": "^5.2.0",
-    "nodemon": "^1.18.3",
-    "nyc": "^12.0.2",
+    "cli-progress": "^3.3.1",
+    "coveralls": "^3.0.6",
+    "cross-env": "^6.0.0",
+    "deep-equal": "^2.0.1",
+    "delay": "^4.3.0",
+    "gitbook-cli": "^2.3.2",
+    "ioredis": "^4.14.1",
+    "mocha": "^6.2.2",
+    "nodemon": "^2.0.1",
+    "nyc": "^15.0.0-beta.0",
     "pre-commit": "^1.2.2",
-    "prettier": "^1.15.2"
+    "radargun": "^1.0.1",
+    "rimraf": "^3.0.0",
+    "rollup": "^1.26.5",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-terser": "^5.1.2",
+    "rollup-plugin-typescript2": "^0.25.2",
+    "source-map-support": "^0.5.13",
+    "ts-node": "^8.0.2",
+    "tslint": "^5.20.0",
+    "typedoc": "^0.15.0",
+    "typedoc-plugin-markdown": "^2.2.11",
+    "typescript": "^3.6.4",
+    "wide-align": "^1.1.3"
   }
 }
