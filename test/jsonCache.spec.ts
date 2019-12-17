@@ -86,7 +86,7 @@ describe('#redis-json', () => {
           expire: 1,
         });
 
-        await delay(1010);
+        await delay(1500);
 
         const response = await jsonCache.get('5');
         expect(response).to.not.exist;
