@@ -28,7 +28,7 @@
     "url": "git+https://github.com/AkashBabu/redis-json.git"
   },
   "engines": {
-    "node": ">=7.0.0"
+    "node": ">=8.0.0"
   },
   "keywords": [
     "redis",
