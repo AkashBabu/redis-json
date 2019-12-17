@@ -96,6 +96,24 @@ Even if key is not of type hashset, ~~resave~~ rewrite will delete it and update
 Clears/removes all the keys with the prefix from redis using `multi` command.  
 Useful when trying to refresh the entire cache.
 
+## Caveat
+
+All the values will be parsed to String before saving the same in redis and hence during retreival, we cannot identify the type of data which was saved earlier and hence number will be stringified, whereas the rest of the property types will remain intact(due to internal reverse parsing).  
+
+Below is the table of original type vs retreived type of the object properties
+
+| Original Type | Retreived type |
+|:--------------|:---------------|
+| string        | string         |
+| number        | string         |
+| boolean       | boolean        |
+| undefined     | undefined      |
+| null          | null           |
+| object        | object         |
+| array         | array          |
+
+Hence make sure to parse the number fields back to number by using a '+' in front of the property like => `+obj.numField` to ensure the numbers as treated as numbers 😜
+
 ## Changelogs
 For detailed ChangeLogs please refer [this](https://github.com/AkashBabu/redis-json/blob/master/CHANGELOG.md)
 
