@@ -5,10 +5,14 @@ os:
   - osx
   - windows
 
-node_js: 
+node_js:
+  - 7 
   - 8
   - 9
   - 10
+
+services:
+  - "redis-server"
 
 branches:
   only:
