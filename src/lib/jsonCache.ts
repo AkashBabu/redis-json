@@ -1,7 +1,14 @@
 import { flatten, unflatten } from './flat';
-import { IJSONCache, IOptions, ISetOptions, IObj } from './interfaces';
+import { IOptions, ISetOptions } from './interfaces';
 
-export default class JSONCache implements IJSONCache {
+interface IJSONCache<T> {
+  set(key: string, obj: T, options: ISetOptions): Promise<any>;
+  get(key: string, ...fields: string[]): Promise<T|undefined>;
+  rewrite(key: string, obj: T): Promise<any>;
+  clearAll(): Promise<any>;
+}
+
+export default class JSONCache<T> implements IJSONCache<T> {
   /**
    * Intializes JSONStore instance
    * @param redisClient IORedis client
@@ -19,7 +26,7 @@ export default class JSONCache implements IJSONCache {
    * @param obj JSON object to be stored
    * @param options
    */
-  public async set(key: string, obj: IObj, options: ISetOptions = {}): Promise<any> {
+  public async set(key: string, obj: T, options: ISetOptions = {}): Promise<any> {
     const flattened = flatten(obj);
 
     // this is done to allow storage of empty objects
@@ -35,13 +42,13 @@ export default class JSONCache implements IJSONCache {
    * unflattens it back to the original Object
    *
    * @param key Redis key
-   * @param ring} fields List of fields to be retreived from redis.
+   * @param fields List of fields to be retreived from redis.
    *    This helps reduce network latency incase only a few fields are
    *    needed.
    *
    * @returns request object from the cache
    */
-  public async get(key: string, ...fields: string[]): Promise<IObj | undefined> {
+  public async get(key: string, ...fields: string[]): Promise<T | undefined> {
     const result = await this.redisClient[fields.length > 0 ? 'hmget' : 'hgetall'].call(
       this.redisClient,
       this.getKey(key),
@@ -61,19 +68,19 @@ export default class JSONCache implements IJSONCache {
       return fields.reduce((res, field, i) => {
         res[field] = result[i];
         return res;
-      }, {});
+      }, {}) as T;
     }
 
-    return unflatten(result);
+    return unflatten(result) as T;
   }
 
   /**
    * Replace the entire hashset for the given key
    *
    * @param key Redis key
-   * @param obj JSON Object
+   * @param obj JSON Object of type T
    */
-  public async rewrite(key: string, obj: IObj): Promise<any> {
+  public async rewrite(key: string, obj: T): Promise<any> {
     await this.redisClient.del.call(this.redisClient, this.getKey(key));
     await this.set(key, obj);
   }

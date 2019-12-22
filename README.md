@@ -2,8 +2,12 @@
 Nodejs library to store/retreive JSON Objects in RedisDB
 
 ## Description
-Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis just like a normal hashset, on `get` the hashset is unflattened and converted back to the original JSON object.  
-Under the hood it uses [flat](https://www.npmjs.com/package/flat) library for flattening and unflattening JSON objects
+Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object.  
+~~Under the hood it uses [flat](https://www.npmjs.com/package/flat) library for flattening and unflattening JSON objects~~
+Now we use our own custom flattening and unflattening logic to accomodate more possibilites and eliminate certain bugs and also to improve efficiency.
+
+We now support typescript since 3.1.0 🎉🎉🎊  
+Please see the below updated example.
 
 ## Installation
 
@@ -11,13 +15,22 @@ Under the hood it uses [flat](https://www.npmjs.com/package/flat) library for fl
 
 ## Usage 
 
-```js
-const Redis = require('ioredis');
-const redis = new Redis();
 
-const JSONCache = require('redis-json');
+```TS
+import Redis from 'ioredis';
+import JSONCache from 'redis-json';
 
-const jsonCache = new JSONCache(redis, {prefix: 'cache:'});
+const redis = new Redis() as any;
+
+const jsonCache = new JSONCache<{
+  name: string;
+  age: 25;
+  address: {
+    doorNo: string;
+    locality: string;
+    pincode: number;
+  }
+}>(redis, {prefix: 'cache:'});
 
 const user = {
   name: 'redis-json',
@@ -37,11 +50,11 @@ console.log(response)
 // output
 // {
 //   name: 'redis-json',
-//   age: 25,
+//   age: '25',
 //   address: {
 //     doorNo: '12B',
 //     locality: 'pentagon',
-//     pincode: 123456
+//     pincode: '123456'
 //   },
 //   cars: ['BMW 520i', 'Audo A8']
 // }
@@ -57,41 +70,47 @@ const response = await jsonCache.get('123', 'name', 'age');
 ```
 
 ## API
+
 ### Constructor
-**JSONCache(redisClient, options)**
 
-*redisClient*: RedisClient instance(Preferred ioredis - cient). It support any redisClient instance that has `keys, multi, set, get & del` methods implemented
+**new JSONCache<T>(redisClient, options)**
 
-*options.prefix*: Prefix for redis keys. Defaults to `jc:` (jsonCache)
+| Param | Description |
+|:------|:------------|
+| redisClient | RedisClient instance(Preferred ioredis - cient). It support any redisClient instance that has `keys, multi, set, get & del` methods implemented |
+| options.prefix | Prefix for redis keys. Defaults to `jc:` (jsonCache) |
 
 
 ### Methods
 
-**set(key, jsobObject, options): \<Promise>**
+**set(key: string, jsobObject: T, options): Promise\<any>**
 
-*key*: The redis key that the JSON object has to be stored against.  
-*jsonObject*: JSON obejct that needs to be stored.  
-*options.expire*: Max time-to-live before key expiry
+| Param | Description |
+|:------|:------------|
+| key   | The redis key that the JSON object has to be stored against |
+| jsonObject | JSON obejct that needs to be stored |
+| options.expire | Max time-to-live before key expiry |
 
-if the key already exists, and is of type hashset, then the field in JSON object will get updated along with the existing data.
-
-
-**get(key, ...fields) \<Promise>**
-
-*key*: The redis key in which the JSON object was stored.  
-*fields(optional) [New in v2.4.0]*: List of field to be retrieved from the given key. This can be used if the stored object is large and hence helps to reduce Network latency.
-
-Note: if the key is not of type hashset, then redis will through error.
+*If the key already exists, and is of type hashset, then the field in JSON object will get updated along with the existing data*
 
 
-**~~resave~~ rewrite(key, jsonObj): \<Promise>**
+**get(key, ...fields): Promise\<T | undefined>**
 
-*key*: The redis key that whose value needs to be replaced with the new one.
-*jsonObject*: JSON obejct that needs to be stored.  
+| Param | Description |
+|:------|:------------|
+| key   |The redis key in which the JSON object was stored |
+| fields(optional) [New in v2.4.0] | List of field to be retrieved from the given key. This can be used if the stored object is large and hence helps to reduce Network latency |
 
-Even if key is not of type hashset, ~~resave~~ rewrite will delete it and update the JSON object in the provided key.
+**~~resave~~ rewrite(key, jsonObj): Promise\<any>**
 
-**clearAll(): \<Promise>**
+| Param | Description |
+|:------|:------------|
+|key | The redis key that whose value needs to be replaced with the new one |
+|jsonObject | JSON obejct that needs to be stored |
+
+*Even if key is not of type hashset, ~~resave~~ rewrite will delete it and update the JSON object in the provided key*
+
+**clearAll(): Promise\<any>>**
 
 Clears/removes all the keys with the prefix from redis using `multi` command.  
 Useful when trying to refresh the entire cache.
