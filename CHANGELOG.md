@@ -1,3 +1,6 @@
+# v3.2.0
+* Now supports `.`(Dot) in object property (Ex. {'a.b': 'c'})
+
 # v3.0.0
 * Usage of typescript
 * Better seggregation of files

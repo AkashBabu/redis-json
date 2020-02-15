@@ -182,6 +182,22 @@ describe('#redis-json', () => {
     expect(result).to.be.undefined;
   });
 
+  it('should support `.`(Dot) in object property', async () => {
+    const obj = {
+      'a': 1,
+      'b.c': 'd',
+      'e\.f': 'g',
+    };
+
+    await jsonCache.clearAll();
+
+    await jsonCache.set('8', obj);
+    const result = await jsonCache.get('8') as any;
+
+    expect(result['b.c']).to.be.eq('d');
+    expect(result['e\.f']).to.be.eq('g');
+  });
+
   describe('#different input combinations', () => {
 
     const inputs = [{

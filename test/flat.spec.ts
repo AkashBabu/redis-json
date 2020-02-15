@@ -210,4 +210,15 @@ describe('#unflatten', () => {
     expect(deepEq(unflattened, obj)).to.be.true;
   });
 
+  it('should not flatten / unflattern a Dot in the object property', () => {
+    const obj = {
+      'a.b': 'c',
+    };
+
+    const flattened = flatten(obj);
+    expect(flattened['a/.b']).to.eql('c');
+
+    const unflattened = unflatten(flattened);
+    expect(unflattened['a.b']).to.be.eql('c');
+  });
 });

@@ -57,7 +57,9 @@ const typeMap = {
  */
 function step(obj: IObj, path: string = '', result: IObj = {}) {
   Object.entries(obj).forEach(([key, val]) => {
-    const currPath = path ? `${path}.${key}` : key;
+    const encodedKey = encodeKey(key);
+
+    const currPath = path ? `${path}.${encodedKey}` : encodedKey;
     handleVal(val, currPath, result);
   });
 
@@ -73,11 +75,10 @@ function step(obj: IObj, path: string = '', result: IObj = {}) {
  * @returns unflattened object
  */
 export function unflatten(target: IObj) {
-  const delimiter = '.';
   const result = {};
 
   Object.entries(target).forEach(([key, val]) => { // tslint:disable cyclomatic-complexity
-    const split = key.split(delimiter);
+    const split = splitKey(key);
 
     let i = 0;
 
@@ -131,5 +132,17 @@ const unflattenMap: {[prop: string]: () => any} = {
 function getkey(key: string): string | number {
   const parsedKey = Number(key);
 
-  return isNaN(parsedKey) ? key : parsedKey;
+  return isNaN(parsedKey) ? decodeKey(key) : parsedKey;
+}
+
+function encodeKey(key: string): string {
+  return key.replace(/\./g, '/.');
+}
+
+function decodeKey(key: string): string {
+  return key ? key.replace(/\/./g, '.') : key;
+}
+
+function splitKey(key: string): string[] {
+  return key.split(/(?<!\/)\./);
 }
