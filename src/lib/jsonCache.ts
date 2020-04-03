@@ -1,21 +1,48 @@
 import { flatten, unflatten } from './flat';
 import { IOptions, ISetOptions } from './interfaces';
+import { promisify } from 'util';
+
+type IPromisified = (...args: any[]) => Promise<any>;
+
+type Methods = 'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'keys';
+
+type IRedisMethods = {
+  [K in Methods]: IPromisified;
+};
+
+interface IRedisClient extends IRedisMethods {
+  multi: (...args: any[]) => {
+    exec: IPromisified;
+  };
+}
 
 interface IJSONCache<T> {
   set(key: string, obj: T, options: ISetOptions): Promise<any>;
-  get(key: string, ...fields: string[]): Promise<T|undefined>;
+  get(key: string, ...fields: string[]): Promise<T | undefined>;
   rewrite(key: string, obj: T): Promise<any>;
   clearAll(): Promise<any>;
 }
 
 export default class JSONCache<T> implements IJSONCache<T> {
+  private redisClientInt: IRedisClient;
+
   /**
    * Intializes JSONStore instance
    * @param redisClient IORedis client
    * @param options Options for controlling the prefix
    */
-  constructor(private redisClient: any, private options: IOptions = {}) {
+  constructor(redisClient: any, private options: IOptions = {}) {
     this.options.prefix = options.prefix || 'jc:';
+
+    this.redisClientInt = {
+      hmset: promisify(redisClient.hmset).bind(redisClient),
+      hmget: promisify(redisClient.hmget).bind(redisClient),
+      hgetall: promisify(redisClient.hgetall).bind(redisClient),
+      expire: promisify(redisClient.expire).bind(redisClient),
+      del: promisify(redisClient.del).bind(redisClient),
+      keys: promisify(redisClient.keys).bind(redisClient),
+      multi: redisClient.multi.bind(redisClient),
+    };
   }
 
   /**
@@ -32,9 +59,9 @@ export default class JSONCache<T> implements IJSONCache<T> {
     // this is done to allow storage of empty objects
     flattened.__jc_root__ = '0';
 
-    await this.redisClient.hmset.call(this.redisClient, this.getKey(key), flattened);
+    await this.redisClientInt.hmset(this.getKey(key), flattened);
     if (options.expire)
-      await this.redisClient.expire.call(this.redisClient, this.getKey(key), options.expire);
+      await this.redisClientInt.expire(this.getKey(key), options.expire);
   }
 
   /**
@@ -49,8 +76,7 @@ export default class JSONCache<T> implements IJSONCache<T> {
    * @returns request object from the cache
    */
   public async get(key: string, ...fields: string[]): Promise<T | undefined> {
-    const result = await this.redisClient[fields.length > 0 ? 'hmget' : 'hgetall'].call(
-      this.redisClient,
+    const result = await this.redisClientInt[fields.length > 0 ? 'hmget' : 'hgetall'](
       this.getKey(key),
       ...fields,
     );
@@ -58,7 +84,7 @@ export default class JSONCache<T> implements IJSONCache<T> {
     // Empty object is returned when
     // the given key is not present
     // in the cache
-    if (Object.keys(result).length === 0) {
+    if (Object.keys(result || {}).length === 0) {
       return undefined;
     }
 
@@ -81,7 +107,7 @@ export default class JSONCache<T> implements IJSONCache<T> {
    * @param obj JSON Object of type T
    */
   public async rewrite(key: string, obj: T): Promise<any> {
-    await this.redisClient.del.call(this.redisClient, this.getKey(key));
+    await this.redisClientInt.del(this.getKey(key));
     await this.set(key, obj);
   }
 
@@ -90,10 +116,10 @@ export default class JSONCache<T> implements IJSONCache<T> {
    * having the prefix.
    */
   public async clearAll(): Promise<any> {
-    const keys: string[] = await this.redisClient.keys.call(this.redisClient, `${this.options.prefix}*`);
+    const keys: string[] = await this.redisClientInt.keys(`${this.options.prefix}*`);
 
     // Multi command for efficiently executing all the keys at once
-    await this.redisClient.multi(keys.map(k => ['del', k])).exec();
+    await this.redisClientInt.multi(keys.map(k => ['del', k])).exec();
   }
 
   /******************

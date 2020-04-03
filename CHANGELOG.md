@@ -1,3 +1,9 @@
+# v3.2.1
+* Now supports [`redis`](https://www.npmjs.com/package/redis) client
+* Improves efficiency by replacing `.call` with `.bind` while initializing internal redisClient
+* fixes #7
+* removes the support for browsers (I know it was stupid for this library 😭)
+
 # v3.2.0
 * Now supports `.`(Dot) in object property (Ex. {'a.b': 'c'})
 

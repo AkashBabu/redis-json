@@ -32,7 +32,8 @@ export default [
     ],
     plugins: [
       nodeResolve({
-        extensions: ['.ts']
+        extensions: ['.ts'],
+        preferBuiltins: true
       }),
       typescript({ 
         useTsconfigDeclarationDir: true,
@@ -52,102 +53,11 @@ export default [
     ],
     plugins: [
       nodeResolve({
-        extensions: ['.ts']
+        extensions: ['.ts'],
+        preferBuiltins: true
       }),
       typescript({ tsconfigOverride }),
       babel()
     ]
   },
-
-  // ES for Browsers
-  {
-    input: 'src/index.ts',
-    output: { file: 'es/jsonCache.mjs', format: 'es', indent: false },
-    plugins: [
-      builtins(),
-      nodeResolve({
-        extensions: ['.ts'],
-      }),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('production')
-      }),
-      commonjs({
-        include: /node_modules/
-      }),
-      typescript({ tsconfigOverride }),
-      babel({
-        exclude: 'node_modules/**'
-      }),
-      terser({
-        compress: {
-          pure_getters: true,
-          unsafe: true,
-          unsafe_comps: true,
-          warnings: false
-        }
-      })
-    ]
-  },
-
-  // UMD Development
-  {
-    input: 'src/index.ts',
-    output: {
-      file: 'dist/jsonCache.js',
-      format: 'umd',
-      name: 'JSONCache',
-      indent: false
-    },
-    plugins: [
-      builtins(),
-      nodeResolve({
-        extensions: ['.ts'],
-      }),
-      commonjs({
-        include: /node_modules/
-      }),
-      typescript({ tsconfigOverride }),
-      babel({
-        exclude: 'node_modules/**'
-      }),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('development')
-      })
-    ]
-  },
-
-  // UMD Production
-  {
-    input: 'src/index.ts',
-    output: {
-      file: 'dist/jsonCache.min.js',
-      format: 'umd',
-      name: 'JSONCache',
-      indent: false
-    },
-    plugins: [
-      builtins(),
-      nodeResolve({
-        extensions: ['.ts'],
-      }),
-      commonjs({
-        include: /node_modules/
-      }),
-      typescript({ tsconfigOverride }),
-      babel({
-        exclude: 'node_modules/**'
-      }),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('production')
-      }),
-      terser({
-        compress: {
-          pure_getters: true,
-          unsafe: true,
-          unsafe_comps: true,
-          warnings: false
-        }
-      })
-    ]
-  }
 ]

@@ -1,6 +1,11 @@
 import JSONCache from '../src/lib/jsonCache';
-import Redis from 'ioredis';
-const redis = new Redis({ dropBufferSupport: true }) as any;
+import IORedis from 'ioredis';
+import Redis from 'redis';
+import forEach from 'mocha-each';
+import {promisify} from 'util';
+
+const redisClient = Redis.createClient() as any;
+const ioRedisClient = new IORedis({ dropBufferSupport: true }) as any;
 
 import { expect } from 'chai';
 import deepEq from 'deep-equal';
@@ -41,13 +46,17 @@ const testObj: T = {
   },
 };
 
-describe('#redis-json', () => {
+forEach([
+  ['With IORedisClient', ioRedisClient],
+  ['With RedisClient', redisClient],
+])
+.describe('#redis-json -> %s', (_, client: any) => {
 
   let jsonCache: JSONCache<T>;
   before(async () => {
-    const multi = redis.multi([['del', 'name']]);
+    const multi = client.multi([['del', 'name']]);
     await multi.exec();
-    jsonCache = new JSONCache(redis, {
+    jsonCache = new JSONCache(client, {
       prefix: PREFIX,
     });
   });
@@ -138,26 +147,26 @@ describe('#redis-json', () => {
   });
 
   it('should support prefix for the store object', async () => {
-    const jc = new JSONCache<T>(redis, {
+    const jc = new JSONCache<T>(client, {
       prefix: 'custom:',
     });
 
     const obj = { random: (Math.random() * 1000).toString() };
     await jc.set('6', obj);
 
-    const redisData = await redis.hgetall(`custom:6`);
+    const redisData = await promisify(client.hgetall).bind(client)(`custom:6`);
     delete redisData.__jc_root__;
 
     expect(deepEq(redisData, obj)).to.be.true;
   });
 
   it('should consider `jc:` as the default prefix', async () => {
-    const jc = new JSONCache<T>(redis);
+    const jc = new JSONCache<T>(client);
 
     const obj = { random: (Math.random() * 1000).toString() };
     await jc.set('8', obj);
 
-    const redisData = await redis.hgetall(`jc:8`);
+    const redisData = await promisify(client.hgetall).bind(client)(`jc:8`);
     delete redisData.__jc_root__;
 
     expect(deepEq(redisData, obj)).to.be.true;
@@ -169,7 +178,7 @@ describe('#redis-json', () => {
 
     await jsonCache.clearAll();
 
-    const keys = await redis.keys(`${PREFIX}*`);
+    const keys = await promisify(client.keys).bind(client)(`${PREFIX}*`);
     expect(keys).to.have.length(0);
 
   });
