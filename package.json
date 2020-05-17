@@ -20,7 +20,7 @@
     "rollup:build": "rollup -c",
     "tsdoc": "typedoc",
     "tsdoc:dev": "nodemon --watch src/ -e ts --exec 'npm run tsdoc'",
-    "build": "npm run tsc:build && npm run rollup:build && npm run typedoc",
+    "build": "npm run tsc:build && npm run rollup:build && npm run tsdoc",
     "pack": "npm run build && npm pack",
     "status": "git status",
     "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls"
