@@ -1,17 +1,24 @@
-# redis-json [![Build Status](https://travis-ci.com/AkashBabu/redis-json.svg?branch=master)](https://travis-ci.com/AkashBabu/redis-json) [![Coverage Status](https://coveralls.io/repos/github/AkashBabu/redis-json/badge.svg?branch=master)](https://coveralls.io/github/AkashBabu/redis-json?branch=master)
+# redis-json [![npm version](https://badge.fury.io/js/redis-json.svg)](https://badge.fury.io/js/redis-json) [![Build Status](https://travis-ci.com/AkashBabu/redis-json.svg?branch=master)](https://travis-ci.com/AkashBabu/redis-json) [![Coverage Status](https://coveralls.io/repos/github/AkashBabu/redis-json/badge.svg?branch=master)](https://coveralls.io/github/AkashBabu/redis-json?branch=master) [![Maintainability](https://api.codeclimate.com/v1/badges/0015747bb31d085adae8/maintainability)](https://codeclimate.com/github/AkashBabu/redis-json/maintainability)
+
 Nodejs library to store/retreive JSON Objects in RedisDB
 
 ## Description
 Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object.  
-~~Under the hood it uses [flat](https://www.npmjs.com/package/flat) library for flattening and unflattening JSON objects~~
+
 Now we use our own custom flattening and unflattening logic to accomodate more possibilites and eliminate certain bugs and also to improve efficiency.
 
 We now support typescript since 3.1.0 🎉🎉🎊  
 Please see the below updated example.
 
+## What's new in v4.0.0?
+Following up with [#3](https://github.com/AkashBabu/redis-json/issues/3) & [#8](https://github.com/AkashBabu/redis-json/issues/8) we decided to support types, which means, you get back exactly (===) same object when restored. But as a drawback, each `set` operation would cost 2 hashsets in redis (one for data and the other for type infomation).
+
+Not just that, we also support custom stringifying and parsing logic for Custom Class (For Ex: Date, Person etc).  
+Examples for the same is given below.
+
 ## Installation
 
-> npm i redis-json -D
+> npm install redis-json --save
 
 ## Usage 
 
@@ -50,11 +57,11 @@ console.log(response)
 // output
 // {
 //   name: 'redis-json',
-//   age: '25',
+//   age: 25,
 //   address: {
 //     doorNo: '12B',
 //     locality: 'pentagon',
-//     pincode: '123456'
+//     pincode: 123456
 //   },
 //   cars: ['BMW 520i', 'Audo A8']
 // }
@@ -69,7 +76,38 @@ const response = await jsonCache.get('123', 'name', 'age');
 
 ```
 
+With custom stringifier and parser:
+```TS
+const jsonCache = new JSONCache(redis, {
+  stringifier: {
+    Date: (val: Date) => val.toISOString()
+  },
+  parser: {
+    Date: (str: string) => new Date(str)
+  }
+})
+
+const date = new Date()
+await jsonCache.set('test', {
+  date: date
+})
+
+// Redis hashset
+> hgetall jc:test /// data
+1) "date"
+2) "2020-05-17T14:41:45.861Z"
+> hgetall jc:test_t /// type info
+1) "date"
+2) "Date"
+
+
+const result = await jsonCache.get('test')
+result.date == date /// true
+```
+
 ## API
+
+Please visit [this page](docs/README.md) for detailed API documentation.
 
 ### Constructor
 

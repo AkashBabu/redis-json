@@ -1,3 +1,8 @@
+# v4.0.0
+* Total rewrite of the library for better maintenance and performance improvement
+* Provides extension for custom types, which allows the users to defines how the custom object has to be stored in Redis and how to revive the same back from redis
+* Now provide type support, which means that the type of data use save in jsonCache is exactly(===) the same that you get back
+
 # v3.2.1
 * Now supports [`redis`](https://www.npmjs.com/package/redis) client
 * Improves efficiency by replacing `.call` with `.bind` while initializing internal redisClient

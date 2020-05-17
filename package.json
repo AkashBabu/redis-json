@@ -11,14 +11,16 @@
     "_test": "cross-env TS_NODE_FILES=true mocha --require ts-node/register test/**/*.spec.ts",
     "_test:exit": "npm run _test -- --exit",
     "test": "cross-env NODE_ENV=test npm run _test:exit",
-    "test:dev": "cross-env NODE_ENV=test npm run _test -- -w",
+    "test:dev": "cross-env NODE_ENV=test npm run _test -- --watch --watch-extensions ts",
     "test:grep": "cross-env NODE_ENV=test npm run _test:exit -- -g ",
     "coverage": "nyc npm run test",
     "lint:fix": "tslint --fix --config tslint.json src/index.ts",
     "lint": "tslint --config tslint.json src/index.ts",
     "tsc:build": "tsc",
     "rollup:build": "rollup -c",
-    "build": "npm run tsc:build && npm run rollup:build",
+    "tsdoc": "typedoc",
+    "tsdoc:dev": "nodemon --watch src/ -e ts --exec 'npm run tsdoc'",
+    "build": "npm run tsc:build && npm run rollup:build && npm run typedoc",
     "pack": "npm run build && npm pack",
     "status": "git status",
     "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls"
@@ -41,7 +43,6 @@
   ],
   "precommit": [
     "lint:fix",
-    "lint",
     "coverage",
     "build",
     "status"
@@ -81,7 +82,7 @@
     "ioredis": "^4.14.1",
     "mocha": "^6.2.2",
     "mocha-each": "^2.0.1",
-    "nodemon": "^2.0.1",
+    "nodemon": "^2.0.4",
     "nyc": "^15.0.0-beta.0",
     "pre-commit": "^1.2.2",
     "radargun": "^1.0.1",
@@ -97,8 +98,8 @@
     "source-map-support": "^0.5.13",
     "ts-node": "^8.0.2",
     "tslint": "^5.20.0",
-    "typedoc": "^0.15.0",
-    "typedoc-plugin-markdown": "^2.2.11",
+    "typedoc": "^0.15.8",
+    "typedoc-plugin-markdown": "^2.2.17",
     "typescript": "^3.6.4",
     "wide-align": "^1.1.3"
   }

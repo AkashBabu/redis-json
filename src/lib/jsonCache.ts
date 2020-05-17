@@ -1,6 +1,6 @@
-import { flatten, unflatten } from './flat';
-import { IOptions, ISetOptions } from './interfaces';
 import { promisify } from 'util';
+import { Flattener, IFlattener } from './flattener';
+import { IOptions, ISetOptions, IResult } from '../interfaces';
 
 type IPromisified = (...args: any[]) => Promise<any>;
 
@@ -18,17 +18,45 @@ interface IRedisClient extends IRedisMethods {
 
 interface IJSONCache<T> {
   set(key: string, obj: T, options: ISetOptions): Promise<any>;
-  get(key: string, ...fields: string[]): Promise<T | undefined>;
+  get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
   rewrite(key: string, obj: T): Promise<any>;
   clearAll(): Promise<any>;
 }
 
-export default class JSONCache<T> implements IJSONCache<T> {
+/**
+ * JSONCache eases the difficulties in storing a JSON in redis.
+ *
+ *  It stores the JSON in hashset for simpler get and set of required
+ * fields. It also allows you to override/set specific fields in
+ * the JSON without rewriting the whole JSON tree. Which means that it
+ * is literally possible to `Object.deepAssign()`.
+ *
+ *   Everytime you store an object, JSONCache would store two hashset
+ * in Redis, one for data and the other for type information. This helps
+ * during retrieval of data, to restore the type of data which was originally
+ * provided. All these workaround are needed because Redis DOES NOT support
+ * any other data type apart from String.
+ *
+ * Well the easiest way is to store an object in Redis is
+ * JSON.stringify(obj) and store the stringified result.
+ * But this can cause issue when the obj is
+ * too huge or when you would want to retrieve only specific fields
+ * from the JSON but do not want to parse the whole JSON.
+ *   Also note that this method would end up in returing all the
+ * fields as strings and you would have no clue to identify the type of
+ * field.
+ */
+export default class JSONCache<T = any> implements IJSONCache<T> {
   private redisClientInt: IRedisClient;
 
+  private flattener: IFlattener;
+
   /**
-   * Intializes JSONStore instance
-   * @param redisClient IORedis client
+   * Intializes JSONCache instance
+   * @param redisClient RedisClient instance(Preferred ioredis - cient).
+   *      It support any redisClient instance that has
+   *      `'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'keys'`
+   *      methods implemented
    * @param options Options for controlling the prefix
    */
   constructor(redisClient: any, private options: IOptions = {}) {
@@ -43,6 +71,9 @@ export default class JSONCache<T> implements IJSONCache<T> {
       keys: promisify(redisClient.keys).bind(redisClient),
       multi: redisClient.multi.bind(redisClient),
     };
+
+    this.flattener = new Flattener(options.stringifier, options.parser);
+
   }
 
   /**
@@ -54,14 +85,18 @@ export default class JSONCache<T> implements IJSONCache<T> {
    * @param options
    */
   public async set(key: string, obj: T, options: ISetOptions = {}): Promise<any> {
-    const flattened = flatten(obj);
+    const flattened = this.flattener.flatten(obj);
 
-    // this is done to allow storage of empty objects
-    flattened.__jc_root__ = '0';
-
-    await this.redisClientInt.hmset(this.getKey(key), flattened);
-    if (options.expire)
-      await this.redisClientInt.expire(this.getKey(key), options.expire);
+    await Promise.all([
+      this.redisClientInt.hmset(this.getKey(key), flattened.data),
+      this.redisClientInt.hmset(this.getTypeKey(key), flattened.typeInfo),
+    ]);
+    if (options.expire) {
+      await Promise.all([
+        this.redisClientInt.expire(this.getKey(key), options.expire),
+        this.redisClientInt.expire(this.getTypeKey(key), options.expire),
+      ]);
+    }
   }
 
   /**
@@ -75,29 +110,39 @@ export default class JSONCache<T> implements IJSONCache<T> {
    *
    * @returns request object from the cache
    */
-  public async get(key: string, ...fields: string[]): Promise<T | undefined> {
-    const result = await this.redisClientInt[fields.length > 0 ? 'hmget' : 'hgetall'](
-      this.getKey(key),
-      ...fields,
-    );
+  public async get(key: string, ...fields: string[]): Promise<Partial<T> | undefined> {
+    const [data, typeInfo] = await Promise.all([
+      this.redisClientInt[fields.length > 0 ? 'hmget' : 'hgetall'](
+        this.getKey(key),
+        ...fields,
+      ),
+
+      this.redisClientInt[fields.length > 0 ? 'hmget' : 'hgetall'](
+        this.getTypeKey(key),
+        ...fields,
+      ),
+    ]);
 
     // Empty object is returned when
     // the given key is not present
     // in the cache
-    if (Object.keys(result || {}).length === 0) {
+    if (!data || Object.keys(data).length === 0) {
       return undefined;
     }
 
-    delete result.__jc_root__;
-
+    let result: IResult;
     if (fields.length > 0) {
-      return fields.reduce((res, field, i) => {
-        res[field] = result[i];
+      result = fields.reduce((res, field, i) => {
+        res.data[field] = data[i];
+        res.typeInfo[field] = typeInfo[i];
+
         return res;
-      }, {}) as T;
+      }, { data: {}, typeInfo: {} }) as IResult;
+    } else {
+      result = { data, typeInfo };
     }
 
-    return unflatten(result) as T;
+    return this.flattener.unflatten(result) as T;
   }
 
   /**
@@ -126,7 +171,27 @@ export default class JSONCache<T> implements IJSONCache<T> {
    * PRIVATE METHODS
    ******************/
 
+  /**
+   * Returns the redis storage key for storing data
+   * by prefixing custom string, such that it
+   * doesn't collide with other keys in usage
+   *
+   * @param key Storage key
+   */
   private getKey(key: string): string {
     return `${this.options.prefix}${key}`;
   }
+
+  /**
+   * Returns the redis storage key for storing
+   * corresponding types by prefixing custom string,
+   * such that it doesn't collide with other keys
+   * in usage
+   *
+   * @param key Storage key
+   */
+  private getTypeKey(key: string): string {
+    return `${this.options.prefix}${key}_t`;
+  }
+
 }
