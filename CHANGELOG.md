@@ -1,3 +1,11 @@
+# v4.0.1
+* `clearAll()` now scans the DB via `scan` command(with a COUNT 100), instead of getting all the prefixed keys via `keys` command which would block the DB if the list is huge
+* Now allows fetching of internal fields as well -> `jsonCache.get('test', 'name', 'address', 'cars.0')`
+* Improves documentation
+* fixes a bug, if the key contains '/.' in it, then it was being misinterpreted during retrieval of data from DB
+* adds more test cases for robustness
+* seggregates test cases for better readability
+
 # v4.0.0
 * Total rewrite of the library for better maintenance and performance improvement
 * Provides extension for custom types, which allows the users to defines how the custom object has to be stored in Redis and how to revive the same back from redis

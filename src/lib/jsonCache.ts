@@ -4,7 +4,7 @@ import { IOptions, ISetOptions, IResult } from '../interfaces';
 
 type IPromisified = (...args: any[]) => Promise<any>;
 
-type Methods = 'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'keys';
+type Methods = 'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'scan';
 
 type IRedisMethods = {
   [K in Methods]: IPromisified;
@@ -22,6 +22,8 @@ interface IJSONCache<T> {
   rewrite(key: string, obj: T): Promise<any>;
   clearAll(): Promise<any>;
 }
+
+const SCAN_COUNT = 100;
 
 /**
  * JSONCache eases the difficulties in storing a JSON in redis.
@@ -68,7 +70,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
       hgetall: promisify(redisClient.hgetall).bind(redisClient),
       expire: promisify(redisClient.expire).bind(redisClient),
       del: promisify(redisClient.del).bind(redisClient),
-      keys: promisify(redisClient.keys).bind(redisClient),
+      scan: promisify(redisClient.scan).bind(redisClient),
       multi: redisClient.multi.bind(redisClient),
     };
 
@@ -112,15 +114,8 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    */
   public async get(key: string, ...fields: string[]): Promise<Partial<T> | undefined> {
     const [data, typeInfo] = await Promise.all([
-      this.redisClientInt[fields.length > 0 ? 'hmget' : 'hgetall'](
-        this.getKey(key),
-        ...fields,
-      ),
-
-      this.redisClientInt[fields.length > 0 ? 'hmget' : 'hgetall'](
-        this.getTypeKey(key),
-        ...fields,
-      ),
+      this.redisClientInt.hgetall(this.getKey(key)),
+      this.redisClientInt.hgetall(this.getTypeKey(key)),
     ]);
 
     // Empty object is returned when
@@ -132,9 +127,21 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
 
     let result: IResult;
     if (fields.length > 0) {
-      result = fields.reduce((res, field, i) => {
-        res.data[field] = data[i];
-        res.typeInfo[field] = typeInfo[i];
+      let dataKeys: string[];
+
+      result = fields.reduce((res, field) => {
+        if (field in data) {
+          res.data[field] = data[field];
+          res.typeInfo[field] = typeInfo[field];
+        } else {
+          const searchKey = `${field}.`;
+          (dataKeys || (dataKeys = Object.keys(data))).forEach(flattenedKey => {
+            if (flattenedKey.startsWith(searchKey)) {
+              res.data[flattenedKey] = data[flattenedKey];
+              res.typeInfo[flattenedKey] = typeInfo[flattenedKey];
+            }
+          });
+        }
 
         return res;
       }, { data: {}, typeInfo: {} }) as IResult;
@@ -161,10 +168,16 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    * having the prefix.
    */
   public async clearAll(): Promise<any> {
-    const keys: string[] = await this.redisClientInt.keys(`${this.options.prefix}*`);
+    let cursor = '0';
+    let keys: string[];
 
-    // Multi command for efficiently executing all the keys at once
-    await this.redisClientInt.multi(keys.map(k => ['del', k])).exec();
+    do {
+      [cursor, keys] = await this.redisClientInt.scan(cursor, 'MATCH', `${this.options.prefix}*`, 'COUNT', SCAN_COUNT);
+
+      if (keys.length > 0) {
+        await this.redisClientInt.del(...keys);
+      }
+    } while (cursor !== '0');
   }
 
   /******************

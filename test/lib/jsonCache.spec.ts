@@ -12,19 +12,19 @@ const ioRedisClient = new IORedis({ dropBufferSupport: true }) as any;
 const PREFIX = 'jc:';
 
 interface T {
-  str?: string;
-  num?: number;
-  nested?: {
+  str: string;
+  num: number;
+  nested: Partial<{
     inner: {
       str: string;
     };
-  };
-  address?: {
-    doorNo?: string;
-    locality?: string;
-    pincode?: number;
-    cars?: string[];
-  };
+  }>;
+  address: Partial<{
+    doorNo: string;
+    locality: string;
+    pincode: number;
+    cars: string[];
+  }>;
   [otherProps: string]: any;
 }
 
@@ -50,7 +50,7 @@ forEach([
 ])
   .describe('#redis-json -> %s', (_, client: any) => {
 
-    let jsonCache: JSONCache<T>;
+    let jsonCache: JSONCache<Partial<T>>;
     before(async () => {
       const multi = client.multi([['del', 'name']]);
       await multi.exec();
@@ -63,218 +63,356 @@ forEach([
     beforeEach(async () => await jsonCache.clearAll());
 
     // Clear only the prefixed keys
-    after(async () => await jsonCache.clearAll());
+    // after(async () => await jsonCache.clearAll());
 
-    it('should save json object without any error', async () => {
-      await jsonCache.set('1', testObj);
-    });
+    describe('constructor()', () => {
+      it('should support prefix for the store object', async () => {
+        const jc = new JSONCache<T>(client, {
+          prefix: 'custom:',
+        });
 
-    it('should not replace other properties when set is used', async () => {
-      const extra = { another: 'value' };
-      await jsonCache.set('2', {
-        str: 'blah',
-      });
-      await jsonCache.set('2', testObj);
+        const obj = { random: (Math.random() * 1000).toString() };
+        await jc.set('test', obj as any);
 
-      const response = await jsonCache.get('2');
-      expect(deepEq(response, Object.assign(testObj, extra)));
-    });
+        const redisData = await promisify(client.hgetall).bind(client)(`custom:test`);
+        delete redisData.__jc_root__;
 
-    it('should retreive the JSON object in the same shape as was saved', async () => {
-      await jsonCache.set('3', testObj);
+        expect(deepEq(redisData, obj)).to.be.true;
 
-      const response = await jsonCache.get('3');
-
-      expect(deepEq(testObj, response)).to.be.true;
-    });
-
-    it('should replace the Object when rewrite is used', async () => {
-      await jsonCache.set('4', Object.assign(testObj, { another: 'value' }));
-
-      await jsonCache.rewrite('4', testObj);
-
-      const response = await jsonCache.get('4');
-      expect(deepEq(testObj, response)).to.be.true;
-    });
-
-    it('should expire the keys after the given expiry time', async () => {
-      await jsonCache.set('5', Object.assign(testObj, { another: 'value' }), {
-        expire: 1,
+        await jc.clearAll();
       });
 
-      await delay(1500);
+      it('should consider `jc:` as the default prefix', async () => {
+        const jc = new JSONCache<T>(client);
 
-      const response = await jsonCache.get('5');
-      expect(response).to.not.exist;
-    });
+        const obj = { random: (Math.random() * 1000).toString() };
+        await jc.set('test', obj as any);
 
-    it('should retrieve only the requested fields', async () => {
-      await jsonCache.set('8', testObj);
+        const redisData = await promisify(client.hgetall).bind(client)(`jc:test`);
+        delete redisData.__jc_root__;
 
-      const keys = ['str', 'num'];
-
-      const retreived = await jsonCache.get('8', ...keys) as T;
-
-      expect(Object.keys(retreived)).to.have.all.members(keys);
-
-      keys.forEach(k => {
-        expect(retreived[k] === testObj[k]).to.be.true;
-      });
-    });
-
-    it('should be able to save and retreive empty object', async () => {
-      await jsonCache.set('9', {
-        foo: {},
+        expect(deepEq(redisData, obj)).to.be.true;
       });
 
-      const result = await jsonCache.get('9') as T;
-
-      expect(result.foo).to.be.an('object');
-      expect(Object.keys(result.foo)).to.be.of.length(0);
-    });
-
-    it('should be able to save and retreive empty array', async () => {
-      await jsonCache.set('10', {
-        foo: [],
-      });
-
-      const result = await jsonCache.get('10') as T;
-
-      expect(result.foo).to.be.an('array');
-      expect(result.foo).to.be.of.length(0);
-    });
-
-    it('should support prefix for the store object', async () => {
-      const jc = new JSONCache<T>(client, {
-        prefix: 'custom:',
-      });
-
-      const obj = { random: (Math.random() * 1000).toString() };
-      await jc.set('6', obj);
-
-      const redisData = await promisify(client.hgetall).bind(client)(`custom:6`);
-      delete redisData.__jc_root__;
-
-      expect(deepEq(redisData, obj)).to.be.true;
-    });
-
-    it('should consider `jc:` as the default prefix', async () => {
-      const jc = new JSONCache<T>(client);
-
-      const obj = { random: (Math.random() * 1000).toString() };
-      await jc.set('8', obj);
-
-      const redisData = await promisify(client.hgetall).bind(client)(`jc:8`);
-      delete redisData.__jc_root__;
-
-      expect(deepEq(redisData, obj)).to.be.true;
-    });
-
-    it('should remove all the keys on clearAll', async () => {
-      const obj = { a: 1 };
-      await jsonCache.set('7', obj);
-
-      await jsonCache.clearAll();
-
-      const keys = await promisify(client.keys).bind(client)(`${PREFIX}*`);
-      expect(keys).to.have.length(0);
-
-    });
-
-    it('should return undefined when the requested key is not present in the cache', async () => {
-      const result = await jsonCache.get('unknown');
-
-      expect(result).to.be.undefined;
-    });
-
-    it('should support `.`(Dot) in object property', async () => {
-      const obj = {
-        'a': 1,
-        'b.c': 'd',
-        'e\.f': 'g',
-      };
-
-      await jsonCache.set('8', obj);
-      const result = await jsonCache.get('8') as any;
-
-      expect(result['b.c']).to.be.eq('d');
-      expect(result['e\.f']).to.be.eq('g');
-    });
-
-    it('should return the object in the same shape and type as was saved', async () => {
-      const obj = {
-        data: [
-          1,
-          true,
-          false,
-          null,
-          undefined,
-          'a',
-          {
-            a: 1,
-            b: false,
-            c: '3',
-            d: null,
-            e: undefined,
-            f: {
-              g: 1,
-            },
+      it('should accept custom stringifier and parser for custom class', async () => {
+        const jc = new JSONCache(client, {
+          stringifier: {
+            Date: (val: Date) => val.toISOString(),
           },
-          [1, 2, '3', false, null, undefined],
-        ],
-      };
+          parser: {
+            Date: (str: string) => new Date(str),
+          },
+        });
 
-      await jsonCache.set('test', obj);
+        const obj = {
+          date: new Date(),
+        };
+
+        await jc.set('test', obj);
+
+        const result = await jc.get('test');
+        expect(deepEq(result, obj)).to.be.true;
+      });
+    });
+
+    describe('.set()', () => {
+      it('should save json object without any error', async () => {
+        await jsonCache.set('test', testObj);
+      });
+
+      it('should not replace other properties when set is used', async () => {
+        const extra = { another: 'value' };
+        await jsonCache.set('test', {
+          str: 'blah',
+        });
+        await jsonCache.set('test', testObj);
+
+        const response = await jsonCache.get('test');
+        expect(deepEq(response, Object.assign(testObj, extra)));
+      });
+
+      it('should expire the keys after the given expiry time', async () => {
+        await jsonCache.set('test', Object.assign(testObj, { another: 'value' }), {
+          expire: 1,
+        });
+
+        await delay(1100);
+
+        const response = await jsonCache.get('test');
+        expect(response).to.not.exist;
+      });
+
+      it('should be able to save and retreive empty object', async () => {
+        await jsonCache.set('test', {
+          foo: {},
+        });
+
+        const result = await jsonCache.get('test') as T;
+
+        expect(result.foo).to.be.an('object');
+        expect(Object.keys(result.foo)).to.be.of.length(0);
+      });
+
+      it('should be able to save and retreive empty array', async () => {
+        await jsonCache.set('test', {
+          foo: [],
+        });
+
+        const result = await jsonCache.get('test') as T;
+
+        expect(result.foo).to.be.an('array');
+        expect(result.foo).to.be.of.length(0);
+      });
+
+      it('should override the existing field values', async () => {
+        await jsonCache.set('test', {
+          str: 'blah',
+          num: 1,
+          bool: true,
+        });
+        await jsonCache.set('test', {
+          str: 'foo',
+          num: 2,
+        });
+
+        const response = await jsonCache.get('test');
+        expect(response?.str).to.be.eql('foo');
+        expect(response?.num).to.be.eql(2);
+        expect((response as any).bool).to.be.eql(true);
+      });
+
+      it('should add new field values', async () => {
+        await jsonCache.set('test', {
+          str: 'blah',
+          num: 1,
+          bool: true,
+        });
+        await jsonCache.set('test', {
+          newField: 'foo',
+        });
+
+        const response = await jsonCache.get('test');
+        expect(response?.str).to.be.eql('blah');
+        expect(response?.num).to.be.eql(1);
+        expect((response as any).bool).to.be.eql(true);
+        expect((response as any).newField).to.be.eql('foo');
+      });
+    });
+
+    describe('.get()', () => {
+      it('should retreive the JSON object in the same shape as was saved', async () => {
+        await jsonCache.set('test', testObj);
+
+        const response = await jsonCache.get('test');
+
+        expect(deepEq(testObj, response)).to.be.true;
+      });
+
+      it('should retrieve only the requested fields', async () => {
+        await jsonCache.set('test', testObj);
+
+        const keys = ['str', 'num'];
+
+        const retreived = await jsonCache.get('test', ...keys) as T;
+
+        expect(Object.keys(retreived)).to.have.all.members(keys);
+
+        keys.forEach(k => {
+          expect(retreived[k] === testObj[k]).to.be.true;
+        });
+      });
+
+      it('should return undefined when the requested key is not present in the cache', async () => {
+        const result = await jsonCache.get('unknown');
+
+        expect(result).to.be.undefined;
+      });
+
+      it('should support `.`(Dot) in object property', async () => {
+        const obj = {
+          'a': 1,
+          'b.c': 'd',
+          'e/.f': 'g',
+        };
+
+        await jsonCache.set('test', obj);
+        const result = await jsonCache.get('test') as any;
+
+        expect(result['b.c']).to.be.eq('d');
+        expect(result['e/.f']).to.be.eq('g');
+      });
+
+      it('should be able to save and retrieve an array', async () => {
+        const arr = [
+          {
+            id: 1,
+            name: 'John',
+            age: 22,
+          },
+          {
+            id: 2,
+            name: 'James',
+            age: 24,
+          },
+        ];
+
+        await jsonCache.set('test', arr);
+        const result = await jsonCache.get('test') as any;
+        expect(result).to.be.an('array');
+        expect(deepEq(result, arr)).to.be.true;
+      });
+
+      it('should retrieve only the requested inner fields', async () => {
+        const obj = {
+          a: {
+            b: 1,
+            c: '2',
+          },
+          d: false,
+          e: true,
+          f: [1, 2],
+        };
+
+        const filteredObj = {
+          a: {
+            b: 1,
+          },
+          d: false,
+          f: [1, 2],
+        };
+
+        await jsonCache.set('test', obj);
+
+        const result = await jsonCache.get('test', 'a.b', 'd', 'f');
+
+        expect(deepEq(result, filteredObj, { strict: true })).to.be.true;
+      });
+    });
+
+    describe('.clearAll()', () => {
+
+      it('should remove all the keys on clearAll', async () => {
+        const obj = { a: 1 };
+        await jsonCache.set('test', obj);
+
+        await jsonCache.clearAll();
+
+        const keys = await promisify(client.keys).bind(client)(`${PREFIX}*`);
+        expect(keys).to.have.length(0);
+
+      });
+
+      it('should clearAll the given keys in batches by scanning through the DB', async () => {
+        const promises: Array<Promise<any>> = [];
+        for (let i = 0; i < 1000; i++) {
+          promises.push(jsonCache.set('test' + i, { str: '' }));
+        }
+
+        await Promise.all(promises);
+
+        await jsonCache.clearAll();
+
+        const keys = await promisify(client.keys).bind(client)(`${PREFIX}*`);
+        expect(keys).to.have.length(0);
+      });
 
     });
 
-    it('should be able to save and retrieve an array', async () => {
-      const arr = [
+    describe('.rewrite()', () => {
+      it('should replace the Object when rewrite is used', async () => {
+        await jsonCache.set('test', Object.assign(testObj, { another: 'value' }));
+
+        await jsonCache.rewrite('test', testObj);
+
+        const response = await jsonCache.get('test');
+        expect(deepEq(testObj, response)).to.be.true;
+      });
+    });
+
+    describe('#input combinations', () => {
+
+      const inputs = [
         {
-          id: 1,
-          name: 'John',
-          age: 22,
+          a: 1,
+          b: 2,
+          c: 3,
+          d: {
+            e: 4,
+            f: {},
+            m: [],
+            n: [5, '6'],
+          },
+          g: ['h', {}, [], { o: 7 }],
+          i: undefined,
+          j: null,
+          k: false,
+          l: 'lol',
+        }, {
+          a: 1,
+          b: {},
+        }, {
+          a: 1,
+          b: [],
+        }, {
+          a: 1,
+          b: {
+            c: {
+              d: 2,
+            },
+            e: {},
+          },
+        }, {
+          a: 1,
+          b: [[], [1]],
+        }, {
+          a: 1,
+          b: {
+            c: [],
+            d: [2],
+          },
+        }, {
+          a: 1,
+          b: [{}, { c: 2 }],
         },
+        {},
         {
-          id: 2,
-          name: 'James',
-          age: 24,
+          a: 1,
+          b: '1',
+          c: false,
+          d: true,
+          e: null,
+          f: undefined,
+          h: '{}',
+          i: '[]',
+          j: 'null',
+          k: 'undefined',
+          l: {
+            a: 1,
+            b: '1',
+            c: false,
+            d: true,
+            e: null,
+            f: undefined,
+            h: '{}',
+            i: '[]',
+            j: 'null',
+            k: 'undefined',
+            l: {
+              m: 1,
+              n: [1, 2, { a: 1 }, [], [1, 2], [1, '2', true, false, null, undefined, { a: 1 }]],
+            },
+            m: {},
+            n: [],
+          },
+          m: [],
+          n: [1, 2, { a: 1 }, [], [1, 2], [1, '2', true, false, null, undefined, { a: 1 }]],
+          o: {},
         },
+        {},
+        [],
+        [{ a: 1 }, 1, true, false, null, undefined, 'test', [1, 2, { b: 1 }]],
       ];
 
-      await jsonCache.set('test', arr);
-      const result = await jsonCache.get('test') as any;
-      expect(result).to.be.an('array');
-      expect(deepEq(result, arr)).to.be.true;
-    });
-
-    it('should retrieve only the requested inner fields', async () => {
-      const obj = {
-        a: {
-          b: 1,
-          c: '2',
-        },
-        d: false,
-        e: true,
-        f: [1, 2],
-      };
-
-      const filteredObj = {
-        a: {
-          b: 1,
-        },
-        d: false,
-        f: [1],
-      };
-
-      await jsonCache.set('test', obj);
-
-      const result = await jsonCache.get('test', 'a.b', 'd', 'f.0');
-
-      expect(deepEq(result, filteredObj, { strict: true })).to.be.true;
-    });
-
-    it('should accept custom stringifier and parser for custom class', async () => {
       const jc = new JSONCache(client, {
         stringifier: {
           Date: (val: Date) => val.toISOString(),
@@ -284,70 +422,15 @@ forEach([
         },
       });
 
-      const obj = {
-        date: new Date(),
-      };
-
-      await jc.set('test', obj);
-
-      const result = await jc.get('test');
-      expect(deepEq(result, obj)).to.be.true;
-    });
-
-    describe('#different input combinations', () => {
-
-      const inputs = [{
-        a: 1,
-        b: 2,
-        c: 3,
-        d: {
-          e: 4,
-          f: {},
-          m: [],
-          n: [5, '6'],
-        },
-        g: ['h', {}, [], { o: 7 }],
-        i: undefined,
-        j: null,
-        k: false,
-        l: 'lol',
-      }, {
-        a: 1,
-        b: {},
-      }, {
-        a: 1,
-        b: [],
-      }, {
-        a: 1,
-        b: {
-          c: {
-            d: 2,
-          },
-          e: {},
-        },
-      }, {
-        a: 1,
-        b: [[], [1]],
-      }, {
-        a: 1,
-        b: {
-          c: [],
-          d: [2],
-        },
-      }, {
-        a: 1,
-        b: [{}, { c: 2 }],
-      }, {}];
-
       inputs.forEach((input, i) => {
         it(
           `should be able to save and retrieve the given object in the exact same shape for input: #${i}`,
           async () => {
-            await jsonCache.set('sameShape', input);
+            await jc.set('sameShape', input);
 
             const output = await jsonCache.get('sameShape');
 
-            expect(deepEq(output, input), `failed to match: \n\texpect: ${JSON.stringify(input, null, 2)}, \n\tactual: ${JSON.stringify(output, null, 2)}`).to.be.true;
+            expect(deepEq(output, input, { strict: true }), `failed to match: \n\texpect: ${JSON.stringify(input, null, 2)}, \n\tactual: ${JSON.stringify(output, null, 2)}`).to.be.true;
           });
       });
     });

@@ -34,6 +34,11 @@ describe('#utils/key', () => {
       const key = 'helloworld';
       expect(encodeKey(key)).to.be.eq('helloworld');
     });
+
+    it('should encode / decode a key with /.', () => {
+      const key = 'hello/.world';
+      expect(parseKey(encodeKey(key))).to.be.eql(key);
+    });
   });
 
   describe('#splitKey', () => {

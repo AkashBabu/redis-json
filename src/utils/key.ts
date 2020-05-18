@@ -32,7 +32,7 @@ export function encodeKey(key: string): string {
  * @param key
  */
 function decodeKey(key: string): string {
-  return key ? key.replace(/\/./g, '.') : key;
+  return key ? key.replace(/\/\./g, '.') : key;
 }
 
 export const splitKey = (() => {
