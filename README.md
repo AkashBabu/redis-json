@@ -18,7 +18,7 @@ Examples for the same is given below.
 ## Usage 
 
 
-```TS
+```typescript
 import Redis from 'ioredis';
 import JSONCache from 'redis-json';
 
