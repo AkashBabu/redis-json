@@ -45,6 +45,7 @@ field.
 ### Methods
 
 * [clearAll](jsoncache.md#clearall)
+* [del](jsoncache.md#del)
 * [get](jsoncache.md#get)
 * [rewrite](jsoncache.md#rewrite)
 * [set](jsoncache.md#set)
@@ -55,7 +56,7 @@ field.
 
 \+ **new JSONCache**(`redisClient`: any, `options`: [IOptions](../interfaces/ioptions.md)): *[JSONCache](jsoncache.md)*
 
-Defined in src/lib/jsonCache.ts:54
+Defined in src/lib/jsonCache.ts:55
 
 Intializes JSONCache instance
 
@@ -74,10 +75,35 @@ Name | Type | Default | Description |
 
 ▸ **clearAll**(): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:170
+Defined in src/lib/jsonCache.ts:171
 
 Removes/deletes all the keys in the JSON Cache,
 having the prefix.
+
+**Returns:** *Promise‹any›*
+
+___
+
+###  del
+
+▸ **del**(`key`: string): *Promise‹any›*
+
+Defined in src/lib/jsonCache.ts:196
+
+Removes the given key from Redis
+
+Please use this method instead of
+directly using `redis.del` as this method
+ensures that even the corresponding type info
+is removed. It also ensures that prefix is
+added to key, ensuring no other key is
+removed unintentionally
+
+**Parameters:**
+
+Name | Type | Description |
+------ | ------ | ------ |
+`key` | string | Redis key  |
 
 **Returns:** *Promise‹any›*
 
@@ -87,7 +113,7 @@ ___
 
 ▸ **get**(`key`: string, ...`fields`: string[]): *Promise‹Partial‹T› | undefined›*
 
-Defined in src/lib/jsonCache.ts:115
+Defined in src/lib/jsonCache.ts:116
 
 Retrieves the hashset from redis and
 unflattens it back to the original Object
@@ -109,7 +135,7 @@ ___
 
 ▸ **rewrite**(`key`: string, `obj`: T): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:161
+Defined in src/lib/jsonCache.ts:162
 
 Replace the entire hashset for the given key
 
@@ -128,7 +154,7 @@ ___
 
 ▸ **set**(`key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:89
+Defined in src/lib/jsonCache.ts:90
 
 Flattens the given json object and
 stores it in Redis hashset

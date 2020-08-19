@@ -329,6 +329,29 @@ forEach([
       });
     });
 
+    describe('.del()', () => {
+      it('should remove the given key from cache', async () => {
+        await jsonCache.set('test', testObj);
+
+        let result = await jsonCache.get('test');
+        expect(deepEq(result, testObj)).to.be.true;
+
+        await jsonCache.del('test');
+        result = await jsonCache.get('test');
+        expect(result).to.be.undefined;
+      });
+      it('should not remove any other keys in the cache', async () => {
+        await jsonCache.set('test', {name: 'test'});
+        await jsonCache.set('test1', {name: 'test1'});
+
+        await jsonCache.del('test');
+        const result = await jsonCache.get('test');
+        expect(result).to.be.undefined;
+        const result1 = await jsonCache.get('test1');
+        expect(deepEq(result1, {name: 'test1'})).to.be.true;
+      });
+    });
+
     describe('#input combinations', () => {
 
       const inputs = [

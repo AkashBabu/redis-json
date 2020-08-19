@@ -1,3 +1,6 @@
+# v4.1.0
+* adds `.del()` method
+
 # v4.0.1
 * `clearAll()` now scans the DB via `scan` command(with a COUNT 100), instead of getting all the prefixed keys via `keys` command which would block the DB if the list is huge
 * Now allows fetching of internal fields as well -> `jsonCache.get('test', 'name', 'address', 'cars.0')`

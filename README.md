@@ -98,7 +98,7 @@ await jsonCache.get('123');
 ```
 
 With custom stringifier and parser:
-```TS
+```typescript
 const jsonCache = new JSONCache(redis, {
   stringifier: {
     Date: (val: Date) => val.toISOString()
@@ -138,14 +138,19 @@ Types of the data are retained when retrieved from Redis.
 
 Please refer to [this page](https://github.com/AkashBabu/redis-json/blob/master/CHANGELOG.md)
 
-## Mocha & Chai (Testing)
-> npm test
-
 ## Coverage Report
 > npm run coverage
 
 ## Contributions
-This is open-source, which makes it obvious for any PRs, but I would request you to add necessary test-cases for the same 
+This is open-source, which makes it obvious for any PRs, but I would request you to add necessary test-cases for the same.
+
+### Pre-requisites:
+Run your redis-server and then point the same client to the same. 
+An easier way to start redis-server, provided you've already installed `docker` (else visit [this page](https://docs.docker.com/get-docker/)) is by running this command:
+> docker run --rm -it --name redis -p 6379:6379 redis
+
+We follow TDD approach, so write your test cases first and then run the same paralelly during development by running the following command:
+> npm run test:dev
 
 ## LICENCE
 

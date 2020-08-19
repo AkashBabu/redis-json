@@ -21,6 +21,7 @@ interface IJSONCache<T> {
   get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
   rewrite(key: string, obj: T): Promise<any>;
   clearAll(): Promise<any>;
+  del(key: string): Promise<any>;
 }
 
 const SCAN_COUNT = 100;
@@ -178,6 +179,25 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
         await this.redisClientInt.del(...keys);
       }
     } while (cursor !== '0');
+  }
+
+  /**
+   * Removes the given key from Redis
+   *
+   * Please use this method instead of
+   * directly using `redis.del` as this method
+   * ensures that even the corresponding type info
+   * is removed. It also ensures that prefix is
+   * added to key, ensuring no other key is
+   * removed unintentionally
+   *
+   * @param key Redis key
+   */
+  public async del(key: string): Promise<any> {
+    await Promise.all([
+      this.redisClientInt.del(this.getKey(key)),
+      this.redisClientInt.del(this.getTypeKey(key)),
+    ]);
   }
 
   /******************
