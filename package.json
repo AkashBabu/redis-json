@@ -1,6 +1,6 @@
 {
   "name": "redis-json",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "A wrapper library to store JSON Objects in redis-hashsets and retrieve it back as JSON objects",
   "sideEffects": false,
   "main": "lib/jsonCache.js",
