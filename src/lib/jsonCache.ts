@@ -10,18 +10,20 @@ type IRedisMethods = {
   [K in Methods]: IPromisified;
 };
 
-interface IRedisClient extends IRedisMethods {
-  multi: (...args: any[]) => {
-    exec: IPromisified;
-  };
-}
+type IRedisClient = IRedisMethods;
+type Transaction = any;
 
 interface IJSONCache<T> {
   set(key: string, obj: T, options: ISetOptions): Promise<any>;
   get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
-  rewrite(key: string, obj: T): Promise<any>;
+  rewrite(key: string, obj: T, options?: ISetOptions): Promise<any>;
   clearAll(): Promise<any>;
   del(key: string): Promise<any>;
+
+  // Transaction methods
+  setT(transaction: Transaction, key: string, obj: T, options: ISetOptions): Transaction;
+  rewriteT(transaction: Transaction, key: string, obj: T, options?: ISetOptions): Transaction;
+  delT(transaction: Transaction, key: string): Transaction;
 }
 
 const SCAN_COUNT = 100;
@@ -57,7 +59,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
   /**
    * Intializes JSONCache instance
    * @param redisClient RedisClient instance(Preferred ioredis - cient).
-   *      It support any redisClient instance that has
+   *      It supports any redisClient instance that has
    *      `'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'keys'`
    *      methods implemented
    * @param options Options for controlling the prefix
@@ -72,7 +74,6 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
       expire: promisify(redisClient.expire).bind(redisClient),
       del: promisify(redisClient.del).bind(redisClient),
       scan: promisify(redisClient.scan).bind(redisClient),
-      multi: redisClient.multi.bind(redisClient),
     };
 
     this.flattener = new Flattener(options.stringifier, options.parser);
@@ -100,6 +101,29 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
         this.redisClientInt.expire(this.getTypeKey(key), options.expire),
       ]);
     }
+  }
+
+  /**
+   * Flattens the given json object and
+   * stores it in Redis hashset using
+   * the given transaction
+   *
+   * @param transaction redis transaction
+   * @param key Redis key
+   * @param obj JSON object to be stored
+   * @param options
+   */
+  public setT(transaction: Transaction, key: string, obj: T, options: ISetOptions = {}): Transaction {
+    const flattened = this.flattener.flatten(obj);
+
+    transaction.hmset(this.getKey(key), flattened.data);
+    transaction.hmset(this.getTypeKey(key), flattened.typeInfo);
+    if (options.expire) {
+      transaction.expire(this.getKey(key), options.expire);
+      transaction.expire(this.getTypeKey(key), options.expire);
+    }
+
+    return transaction;
   }
 
   /**
@@ -159,9 +183,21 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    * @param key Redis key
    * @param obj JSON Object of type T
    */
-  public async rewrite(key: string, obj: T): Promise<any> {
+  public async rewrite(key: string, obj: T, options?: ISetOptions): Promise<any> {
     await this.redisClientInt.del(this.getKey(key));
-    await this.set(key, obj);
+    await this.set(key, obj, options);
+  }
+
+  /**
+   * Replace the entire hashset for the given key
+   *
+   * @param transaction Redis transaction
+   * @param key Redis key
+   * @param obj JSON Object of type T
+   */
+  public rewriteT(transaction: Transaction, key: string, obj: T, options?: ISetOptions): Transaction {
+    transaction.del(this.getKey(key));
+    return this.setT(transaction, key, obj, options);
   }
 
   /**
@@ -198,6 +234,27 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
       this.redisClientInt.del(this.getKey(key)),
       this.redisClientInt.del(this.getTypeKey(key)),
     ]);
+  }
+
+  /**
+   * Removes the given key from Redis
+   * using the given transaction
+   *
+   * Please use this method instead of
+   * directly using `redis.del` as this method
+   * ensures that even the corresponding type info
+   * is removed. It also ensures that prefix is
+   * added to key, ensuring no other key is
+   * removed unintentionally
+   *
+   * @param transaction Redis transaction
+   * @param key Redis key
+   */
+  public delT(transaction: Transaction, key: string): Transaction {
+    transaction.del(this.getKey(key));
+    transaction.del(this.getTypeKey(key));
+
+    return transaction;
   }
 
   /******************

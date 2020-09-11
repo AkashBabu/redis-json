@@ -46,9 +46,12 @@ field.
 
 * [clearAll](jsoncache.md#clearall)
 * [del](jsoncache.md#del)
+* [delT](jsoncache.md#delt)
 * [get](jsoncache.md#get)
 * [rewrite](jsoncache.md#rewrite)
+* [rewriteT](jsoncache.md#rewritet)
 * [set](jsoncache.md#set)
+* [setT](jsoncache.md#sett)
 
 ## Constructors
 
@@ -56,7 +59,7 @@ field.
 
 \+ **new JSONCache**(`redisClient`: any, `options`: [IOptions](../interfaces/ioptions.md)): *[JSONCache](jsoncache.md)*
 
-Defined in src/lib/jsonCache.ts:55
+Defined in src/lib/jsonCache.ts:57
 
 Intializes JSONCache instance
 
@@ -64,7 +67,7 @@ Intializes JSONCache instance
 
 Name | Type | Default | Description |
 ------ | ------ | ------ | ------ |
-`redisClient` | any | - | RedisClient instance(Preferred ioredis - cient).      It support any redisClient instance that has      `'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'keys'`      methods implemented |
+`redisClient` | any | - | RedisClient instance(Preferred ioredis - cient).      It supports any redisClient instance that has      `'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'keys'`      methods implemented |
 `options` | [IOptions](../interfaces/ioptions.md) |  {} | Options for controlling the prefix  |
 
 **Returns:** *[JSONCache](jsoncache.md)*
@@ -75,7 +78,7 @@ Name | Type | Default | Description |
 
 ▸ **clearAll**(): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:171
+Defined in src/lib/jsonCache.ts:207
 
 Removes/deletes all the keys in the JSON Cache,
 having the prefix.
@@ -88,7 +91,7 @@ ___
 
 ▸ **del**(`key`: string): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:196
+Defined in src/lib/jsonCache.ts:232
 
 Removes the given key from Redis
 
@@ -109,11 +112,38 @@ Name | Type | Description |
 
 ___
 
+###  delT
+
+▸ **delT**(`transaction`: Transaction, `key`: string): *Transaction*
+
+Defined in src/lib/jsonCache.ts:253
+
+Removes the given key from Redis
+using the given transaction
+
+Please use this method instead of
+directly using `redis.del` as this method
+ensures that even the corresponding type info
+is removed. It also ensures that prefix is
+added to key, ensuring no other key is
+removed unintentionally
+
+**Parameters:**
+
+Name | Type | Description |
+------ | ------ | ------ |
+`transaction` | Transaction | Redis transaction |
+`key` | string | Redis key  |
+
+**Returns:** *Transaction*
+
+___
+
 ###  get
 
 ▸ **get**(`key`: string, ...`fields`: string[]): *Promise‹Partial‹T› | undefined›*
 
-Defined in src/lib/jsonCache.ts:116
+Defined in src/lib/jsonCache.ts:140
 
 Retrieves the hashset from redis and
 unflattens it back to the original Object
@@ -133,9 +163,9 @@ ___
 
 ###  rewrite
 
-▸ **rewrite**(`key`: string, `obj`: T): *Promise‹any›*
+▸ **rewrite**(`key`: string, `obj`: T, `options?`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:162
+Defined in src/lib/jsonCache.ts:186
 
 Replace the entire hashset for the given key
 
@@ -145,8 +175,30 @@ Name | Type | Description |
 ------ | ------ | ------ |
 `key` | string | Redis key |
 `obj` | T | JSON Object of type T  |
+`options?` | [ISetOptions](../interfaces/isetoptions.md) | - |
 
 **Returns:** *Promise‹any›*
+
+___
+
+###  rewriteT
+
+▸ **rewriteT**(`transaction`: Transaction, `key`: string, `obj`: T, `options?`: [ISetOptions](../interfaces/isetoptions.md)): *Transaction*
+
+Defined in src/lib/jsonCache.ts:198
+
+Replace the entire hashset for the given key
+
+**Parameters:**
+
+Name | Type | Description |
+------ | ------ | ------ |
+`transaction` | Transaction | Redis transaction |
+`key` | string | Redis key |
+`obj` | T | JSON Object of type T  |
+`options?` | [ISetOptions](../interfaces/isetoptions.md) | - |
+
+**Returns:** *Transaction*
 
 ___
 
@@ -154,7 +206,7 @@ ___
 
 ▸ **set**(`key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:90
+Defined in src/lib/jsonCache.ts:91
 
 Flattens the given json object and
 stores it in Redis hashset
@@ -168,3 +220,26 @@ Name | Type | Default | Description |
 `options` | [ISetOptions](../interfaces/isetoptions.md) |  {} |   |
 
 **Returns:** *Promise‹any›*
+
+___
+
+###  setT
+
+▸ **setT**(`transaction`: Transaction, `key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Transaction*
+
+Defined in src/lib/jsonCache.ts:116
+
+Flattens the given json object and
+stores it in Redis hashset using
+the given transaction
+
+**Parameters:**
+
+Name | Type | Default | Description |
+------ | ------ | ------ | ------ |
+`transaction` | Transaction | - | redis transaction |
+`key` | string | - | Redis key |
+`obj` | T | - | JSON object to be stored |
+`options` | [ISetOptions](../interfaces/isetoptions.md) |  {} |   |
+
+**Returns:** *Transaction*

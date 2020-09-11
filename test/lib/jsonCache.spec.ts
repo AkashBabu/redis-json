@@ -7,8 +7,8 @@ import { expect } from 'chai';
 import deepEq from 'deep-equal';
 import delay from 'delay';
 
-const redisClient = Redis.createClient() as any;
-const ioRedisClient = new IORedis({ dropBufferSupport: true }) as any;
+const redisClient = Redis.createClient();
+const ioRedisClient = new IORedis({ dropBufferSupport: true });
 const PREFIX = 'jc:';
 
 interface T {
@@ -349,6 +349,125 @@ forEach([
         expect(result).to.be.undefined;
         const result1 = await jsonCache.get('test1');
         expect(deepEq(result1, {name: 'test1'})).to.be.true;
+      });
+    });
+
+    describe('transactions', () => {
+      describe('.setT()', () => {
+        it('should bind set to the provided transaction',  (done) => {
+          const transaction = client.multi();
+
+          jsonCache.setT(transaction, 'test1', {name: 'test1'});
+          jsonCache.setT(transaction, 'test2', {name: 'test2'});
+
+          transaction
+            .set('name', 'test3')
+            .exec(async (err, replies) => {
+              if (err) done(err);
+              else {
+                expect(replies.length).to.eq(5);
+
+                const test1: any = await jsonCache.get('test1');
+                expect(test1.name).to.eq('test1');
+                const test2: any = await jsonCache.get('test2');
+                expect(test2.name).to.eq('test2');
+
+                client.get('name', (err1, result) => {
+                  if (err1) done(err1);
+
+                  expect(result).to.eq('test3');
+                  done();
+                });
+              }
+            });
+        });
+        it('should bind set to the provided transaction with expiry being set',  (done) => {
+          const transaction = client.multi();
+
+          jsonCache.setT(transaction, 'test1', {name: 'test1'}, {expire: 1});
+
+          transaction
+            .exec(async (err, replies) => {
+              if (err) done(err);
+              else {
+                expect(replies.length).to.eq(4);
+
+                let test1: any = await jsonCache.get('test1');
+                expect(test1.name).to.eq('test1');
+
+                // after expiry
+                await delay(1100);
+                test1 = await jsonCache.get('test1');
+                expect(test1).to.be.undefined;
+
+                done();
+              }
+            });
+        });
+      });
+
+      describe('.delT()', () => {
+        it('should bind del to the provided transaction', (done) => {
+          const transaction = client.multi();
+
+          jsonCache.setT(transaction, 'test1', {name: 'test1'});
+
+          transaction
+            .exec(async (err, replies) => {
+              if (err) done(err);
+              else {
+                expect(replies.length).to.eq(2);
+
+                const test1: any = await jsonCache.get('test1');
+                expect(test1.name).to.eq('test1');
+
+                const transaction2 = client.multi();
+
+                jsonCache.delT(transaction2, 'test1');
+                transaction2.exec(async (err1) => {
+                  if (err1) done(err1);
+                  else {
+                    const test1_1: any = await jsonCache.get('test1');
+                    expect(test1_1).to.be.undefined;
+
+                    done();
+                  }
+                });
+              }
+            });
+        });
+      });
+
+      describe('.rewriteT()', () => {
+        it('should bind rewrite to the given transaction', (done) => {
+          const transaction = client.multi();
+
+          jsonCache.setT(transaction, 'test1', {name: 'test1'});
+
+          transaction
+            .exec(async (err, replies) => {
+              if (err) done(err);
+              else {
+                expect(replies.length).to.eq(2);
+
+                const test1: any = await jsonCache.get('test1');
+                expect(deepEq(test1, {name: 'test1'})).to.be.true;
+
+                const transaction2 = client.multi();
+
+                jsonCache.rewriteT(transaction2, 'test1', {age: 25});
+                transaction2.exec(async (err1) => {
+                  if (err1) done(err1);
+                  else {
+                    const test1_1: any = await jsonCache.get('test1');
+                    expect(deepEq(test1_1, {age: 25})).to.be.true;
+
+                    done();
+                  }
+                });
+              }
+            });
+        });
       });
     });
 

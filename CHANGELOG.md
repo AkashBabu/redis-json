@@ -1,3 +1,7 @@
+# v4.2.0
+* adds support for transactions via `setT`, `delT` & `rewriteT` methods
+* `rewrite` method now support expiry. Please check the API docs for more details
+
 # v4.1.0
 * adds `.del()` method
 

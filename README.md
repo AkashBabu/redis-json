@@ -3,21 +3,24 @@
 Nodejs library to store/retreive JSON Objects in RedisDB
 
 ## Description
-Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object. 
+Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object(with the same types as the original object). 
 
-## What's new in v4.0.0?
-Following up with [#3](https://github.com/AkashBabu/redis-json/issues/3) & [#8](https://github.com/AkashBabu/redis-json/issues/8) we decided to support types, which means, you get back exactly (===) same object when restored. But as a drawback, each `set` operation would cost 2 hashsets in redis (one for data and the other for type infomation).
+## What's new in v4.2.0?
+- In response to issue: [#13](https://github.com/AkashBabu/redis-json/issues/13), we now support transactions 🎉 via `setT()`, `rewriteT()` & `delT()` methods.
+- Now `rewrite` method also supports `expiry` options(same as [ISetOptions](./docs/interfaces/isetoptions.md))
 
-Not just that, we also support custom stringifying and parsing logic for Custom Class (For Ex: Date, Person etc).  
-Examples for the same is given below.
 
 ## Installation
 
 > npm install redis-json --save
 
+## API
+
+Please visit [this page](docs/README.md) for detailed API documentation.
+
 ## Usage 
 
-
+**Simple**
 ```typescript
 import Redis from 'ioredis';
 import JSONCache from 'redis-json';
@@ -97,7 +100,7 @@ await jsonCache.get('123');
 
 ```
 
-With custom stringifier and parser:
+**With custom stringifier and parser:**
 ```typescript
 const jsonCache = new JSONCache(redis, {
   stringifier: {
@@ -126,9 +129,26 @@ const result = await jsonCache.get('test')
 result.date == date /// true
 ```
 
-## API
+**With transactions:**
+```typescript
+const transaction = redisClient.multi();
 
-Please visit [this page](docs/README.md) for detailed API documentation.
+transaction
+  .set('name', 'foo')
+  .set('bar', 'baz')
+
+jsonCache.setT(transaction, 'test', {name: 'testing'})
+jsonCache.delT(transaction, 'test1')
+jsonCache.rewriteT(transaction, 'test2', {name: 'testing', age: 25})
+
+transaction
+  .exec(function(err, replies) => {
+    /// your logic here after
+  })
+```
+Please note that only `setT()`, `rewriteT()` & `delT()` supports transaction, where as `get()` & `clearAll()` do NOT support transaction because we process those results before returning it to the calling function. Moreover there is no real usecase in adding `get` methods to a transaction!
+
+
 
 ## Since v4.0.0
 
