@@ -1,3 +1,6 @@
+# v4.2.1
+* fixes #14, wherein when any prop was `set(id, {})` on an empty object, it wasn't reflected when `get()` was called on it
+
 # v4.2.0
 * adds support for transactions via `setT`, `delT` & `rewriteT` methods
 * `rewrite` method now support expiry. Please check the API docs for more details
