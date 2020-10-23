@@ -53,8 +53,17 @@ export class Flattener implements IFlattener {
       // if the key is '', it means that
       // the flattened object / array is empty
       if (!key) {
-        result = val;
-        return true;
+        if (Object.keys(typedData).length <= 1) {
+          result = val;
+          return true;
+        } else {
+          // when the initial data is {'': {}} and
+          // later a prop is added to the same, then
+          // the data would be {'': {}, prop: {...}}
+          // hence we need to continue the loop when
+          // the keys.length > 1
+          return false;
+        }
       }
 
       const splittedKeys = splitKey(key);

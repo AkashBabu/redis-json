@@ -471,6 +471,29 @@ forEach([
       });
     });
 
+    describe('#bug reports', () => {
+      it('should not allow set&get of empty objects at the root', async () => {
+        await jsonCache.set('test', {});
+        const test: any = await jsonCache.get('test');
+
+        expect(test).to.be.an('object');
+        expect(Object.keys(test).length).to.be.eql(0);
+      });
+
+      it('should not allow adding props to empty objects at the root', async () => {
+        await jsonCache.set('test', {});
+        await jsonCache.set('test', {
+          me: {},
+        });
+
+        const test: any = await jsonCache.get('test');
+
+        expect(test).to.be.an('object');
+        expect(test.me).to.be.an('object');
+        expect(Object.keys(test.me).length).to.be.eql(0);
+      });
+    });
+
     describe('#input combinations', () => {
 
       const inputs = [
