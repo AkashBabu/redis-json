@@ -1,3 +1,6 @@
+# v4.3.0
+* adds `.incr()` & `.incrT()` methods to allow incrementing of values using `hincrbyfloat`.
+
 # v4.2.1
 * fixes #14, wherein when any prop was `set(id, {})` on an empty object, it wasn't reflected when `get()` was called on it
 

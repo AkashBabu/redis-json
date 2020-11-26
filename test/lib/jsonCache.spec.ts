@@ -352,6 +352,119 @@ forEach([
       });
     });
 
+    describe('.incr()', () => {
+      it('should increment the value by the given amount', async () => {
+        const jc = new JSONCache<{
+          messages: number;
+          profile: {
+            name: string;
+            age: number;
+            rand: number[];
+          }
+        }>(client);
+
+        const obj = {
+          messages: 10,
+          profile: {
+            name: 'testing',
+            age: 25,
+            rand: [1, 2, 3],
+          },
+        };
+        await jc.set('test', obj);
+
+        let test = await jc.get('test');
+        expect(deepEq(test, obj)).to.be.true;
+
+        await jc.incr('test', {messages: 1});
+        test = await jc.get('test');
+        expect(test?.messages).to.be.eql(11);
+      });
+      it('should accept nested path',  async () => {
+        const jc = new JSONCache<{
+          messages: number;
+          profile: {
+            name: string;
+            age: number;
+            rand: number[];
+          }
+        }>(client);
+
+        const obj = {
+          messages: 10,
+          profile: {
+            name: 'testing',
+            age: 25,
+            rand: [1, 2, 3],
+          },
+        };
+        await jc.set('test', obj);
+
+        let test = await jc.get('test');
+        expect(deepEq(test, obj)).to.be.true;
+
+        await jc.incr('test', {profile: {age: 1}});
+        test = await jc.get('test');
+        expect(test?.profile?.age).to.be.eql(26);
+      });
+      it('should accept partial nested object even if it includes a key with complete path',  async () => {
+        const jc = new JSONCache<{
+          messages: number;
+          profile: {
+            name: string;
+            age: number;
+            rand: number[];
+          }
+        }>(client);
+
+        const obj = {
+          messages: 10,
+          profile: {
+            name: 'testing',
+            age: 25,
+            rand: [1, 2, 3],
+          },
+        };
+        await jc.set('test', obj);
+
+        let test = await jc.get('test');
+        expect(deepEq(test, obj)).to.be.true;
+
+        await jc.incr('test', {profile: {age: 1, rand: [10]}} as any);
+        test = await jc.get('test');
+        expect(test?.profile?.age).to.be.eql(26);
+        expect(test?.profile?.rand[0]).to.be.eql(11);
+      });
+      it('should not throw error when value is of type other than number',  async () => {
+        const jc = new JSONCache<{
+          messages: number;
+          profile: {
+            name: string;
+            age: number;
+            rand: number[];
+          }
+        }>(client);
+
+        const obj = {
+          messages: 10,
+          profile: {
+            name: 'testing',
+            age: 25,
+            rand: [1, 2, 3],
+          },
+        };
+        await jc.set('test', obj);
+
+        let test = await jc.get('test');
+        expect(deepEq(test, obj)).to.be.true;
+
+        await jc.incr('test', {profile: {rand: [null, 10]}} as any);
+        test = await jc.get('test');
+        expect(test?.profile?.rand[0]).to.be.eql(1);
+        expect(test?.profile?.rand[1]).to.be.eql(12);
+      });
+    });
+
     describe('transactions', () => {
       describe('.setT()', () => {
         it('should bind set to the provided transaction',  (done) => {
@@ -461,6 +574,38 @@ forEach([
                   else {
                     const test1_1: any = await jsonCache.get('test1');
                     expect(deepEq(test1_1, {age: 25})).to.be.true;
+
+                    done();
+                  }
+                });
+              }
+            });
+        });
+      });
+
+      describe('.incrT()', () => {
+        it('should bind increment to the given transaction', (done) => {
+          const transaction = client.multi();
+
+          jsonCache.setT(transaction, 'test1', {age: 25, rand: [1, 2]});
+
+          transaction
+            .exec(async (err, replies) => {
+              if (err) done(err);
+              else {
+                expect(replies.length).to.eq(2);
+
+                const test1: any = await jsonCache.get('test1');
+                expect(deepEq(test1, {age: 25, rand: [1, 2]})).to.be.true;
+
+                const transaction2 = client.multi();
+
+                jsonCache.incrT(transaction2, 'test1', {age: 1, rand: [undefined, 1]} as any);
+                transaction2.exec(async (err1) => {
+                  if (err1) done(err1);
+                  else {
+                    const test1_1: any = await jsonCache.get('test1');
+                    expect(deepEq(test1_1, {age: 26, rand: [1, 3]})).to.be.true;
 
                     done();
                   }
