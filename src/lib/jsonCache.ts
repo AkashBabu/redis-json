@@ -296,14 +296,14 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
         return;
       }
 
-      this.redisClientInt.hincrbyfloat(this.getKey(key), path, incrVal);
+      return this.redisClientInt.hincrbyfloat(this.getKey(key), path, incrVal);
     }));
   }
 
   public incrT(transaction: Transaction, key: string, obj: RecursivePartial<T>): Transaction {
     const flattened = this.flattener.flatten(obj);
 
-    Object.entries(flattened.data).map(([path, incrVal]) => {
+    Object.entries(flattened.data).forEach(([path, incrVal]) => {
 
       // This check is needed to avoid redis errors.
       // It also helps while the user wants to increment the value
