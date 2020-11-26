@@ -48,6 +48,8 @@ field.
 * [del](jsoncache.md#del)
 * [delT](jsoncache.md#delt)
 * [get](jsoncache.md#get)
+* [incr](jsoncache.md#incr)
+* [incrT](jsoncache.md#incrt)
 * [rewrite](jsoncache.md#rewrite)
 * [rewriteT](jsoncache.md#rewritet)
 * [set](jsoncache.md#set)
@@ -59,7 +61,7 @@ field.
 
 \+ **new JSONCache**(`redisClient`: any, `options`: [IOptions](../interfaces/ioptions.md)): *[JSONCache](jsoncache.md)*
 
-Defined in src/lib/jsonCache.ts:57
+Defined in src/lib/jsonCache.ts:67
 
 Intializes JSONCache instance
 
@@ -78,7 +80,7 @@ Name | Type | Default | Description |
 
 ▸ **clearAll**(): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:207
+Defined in src/lib/jsonCache.ts:218
 
 Removes/deletes all the keys in the JSON Cache,
 having the prefix.
@@ -91,7 +93,7 @@ ___
 
 ▸ **del**(`key`: string): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:232
+Defined in src/lib/jsonCache.ts:243
 
 Removes the given key from Redis
 
@@ -116,7 +118,7 @@ ___
 
 ▸ **delT**(`transaction`: Transaction, `key`: string): *Transaction*
 
-Defined in src/lib/jsonCache.ts:253
+Defined in src/lib/jsonCache.ts:264
 
 Removes the given key from Redis
 using the given transaction
@@ -143,7 +145,7 @@ ___
 
 ▸ **get**(`key`: string, ...`fields`: string[]): *Promise‹Partial‹T› | undefined›*
 
-Defined in src/lib/jsonCache.ts:140
+Defined in src/lib/jsonCache.ts:151
 
 Retrieves the hashset from redis and
 unflattens it back to the original Object
@@ -161,11 +163,56 @@ request object from the cache
 
 ___
 
+###  incr
+
+▸ **incr**(`key`: string, `obj`: RecursivePartial‹T›): *Promise‹any›*
+
+Defined in src/lib/jsonCache.ts:286
+
+Increments the value of a variable in the JSON
+Note: You can increment multiple variables in the
+same command (Internally it will split it into multiple
+commands on the RedisDB)
+
+**`example`** 
+```JS
+await jsonCache.incr(key, {messages: 10, profile: {age: 1}})
+```
+
+**Parameters:**
+
+Name | Type | Description |
+------ | ------ | ------ |
+`key` | string | Redis Cache key |
+`obj` | RecursivePartial‹T› | Partial object specifying the path to the required              variable along with value  |
+
+**Returns:** *Promise‹any›*
+
+___
+
+###  incrT
+
+▸ **incrT**(`transaction`: Transaction, `key`: string, `obj`: RecursivePartial‹T›): *Transaction*
+
+Defined in src/lib/jsonCache.ts:303
+
+**Parameters:**
+
+Name | Type |
+------ | ------ |
+`transaction` | Transaction |
+`key` | string |
+`obj` | RecursivePartial‹T› |
+
+**Returns:** *Transaction*
+
+___
+
 ###  rewrite
 
 ▸ **rewrite**(`key`: string, `obj`: T, `options?`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:186
+Defined in src/lib/jsonCache.ts:197
 
 Replace the entire hashset for the given key
 
@@ -185,7 +232,7 @@ ___
 
 ▸ **rewriteT**(`transaction`: Transaction, `key`: string, `obj`: T, `options?`: [ISetOptions](../interfaces/isetoptions.md)): *Transaction*
 
-Defined in src/lib/jsonCache.ts:198
+Defined in src/lib/jsonCache.ts:209
 
 Replace the entire hashset for the given key
 
@@ -206,7 +253,7 @@ ___
 
 ▸ **set**(`key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:91
+Defined in src/lib/jsonCache.ts:102
 
 Flattens the given json object and
 stores it in Redis hashset
@@ -227,7 +274,7 @@ ___
 
 ▸ **setT**(`transaction`: Transaction, `key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Transaction*
 
-Defined in src/lib/jsonCache.ts:116
+Defined in src/lib/jsonCache.ts:127
 
 Flattens the given json object and
 stores it in Redis hashset using

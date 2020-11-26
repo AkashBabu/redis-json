@@ -1,10 +1,11 @@
 import { promisify } from 'util';
 import { Flattener, IFlattener } from './flattener';
 import { IOptions, ISetOptions, IResult } from '../interfaces';
+import { TYPE } from '../utils/type';
 
 type IPromisified = (...args: any[]) => Promise<any>;
 
-type Methods = 'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'scan';
+type Methods = 'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'scan' | 'hincrbyfloat';
 
 type IRedisMethods = {
   [K in Methods]: IPromisified;
@@ -13,17 +14,26 @@ type IRedisMethods = {
 type IRedisClient = IRedisMethods;
 type Transaction = any;
 
+type RecursivePartial<T> = {
+  [P in keyof T]?:
+    T[P] extends any[] ? Array<RecursivePartial<T[P]>>
+    : T[P] extends any ? RecursivePartial<T[P]>
+    : T[P];
+};
+
 interface IJSONCache<T> {
   set(key: string, obj: T, options: ISetOptions): Promise<any>;
   get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
   rewrite(key: string, obj: T, options?: ISetOptions): Promise<any>;
   clearAll(): Promise<any>;
   del(key: string): Promise<any>;
+  incr(key: string, obj: RecursivePartial<T>): Promise<any>;
 
   // Transaction methods
   setT(transaction: Transaction, key: string, obj: T, options: ISetOptions): Transaction;
   rewriteT(transaction: Transaction, key: string, obj: T, options?: ISetOptions): Transaction;
   delT(transaction: Transaction, key: string): Transaction;
+  incrT(transaction: Transaction, key: string, obj: RecursivePartial<T>): Transaction;
 }
 
 const SCAN_COUNT = 100;
@@ -74,6 +84,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
       expire: promisify(redisClient.expire).bind(redisClient),
       del: promisify(redisClient.del).bind(redisClient),
       scan: promisify(redisClient.scan).bind(redisClient),
+      hincrbyfloat: promisify(redisClient.hincrbyfloat).bind(redisClient),
     };
 
     this.flattener = new Flattener(options.stringifier, options.parser);
@@ -253,6 +264,57 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
   public delT(transaction: Transaction, key: string): Transaction {
     transaction.del(this.getKey(key));
     transaction.del(this.getTypeKey(key));
+
+    return transaction;
+  }
+
+  /**
+   * Increments the value of a variable in the JSON
+   * Note: You can increment multiple variables in the
+   * same command (Internally it will split it into multiple
+   * commands on the RedisDB)
+   *
+   * @example
+   * ```JS
+   * await jsonCache.incr(key, {messages: 10, profile: {age: 1}})
+   * ```
+   *
+   * @param key Redis Cache key
+   * @param obj Partial object specifying the path to the required
+   *              variable along with value
+   */
+  public async incr(key: string, obj: RecursivePartial<T>): Promise<any> {
+    const flattened = this.flattener.flatten(obj);
+
+    await Promise.all(Object.entries(flattened.data).map(([path, incrVal]) => {
+
+      // This check is needed to avoid redis errors.
+      // It also helps while the user wants to increment the value
+      // within an array.
+      // Ex: rand: [null, null, 1] => this will increment the 3rd index by 1
+      if (flattened.typeInfo[path] !== TYPE.NUMBER) {
+        return;
+      }
+
+      this.redisClientInt.hincrbyfloat(this.getKey(key), path, incrVal);
+    }));
+  }
+
+  public incrT(transaction: Transaction, key: string, obj: RecursivePartial<T>): Transaction {
+    const flattened = this.flattener.flatten(obj);
+
+    Object.entries(flattened.data).map(([path, incrVal]) => {
+
+      // This check is needed to avoid redis errors.
+      // It also helps while the user wants to increment the value
+      // within an array.
+      // Ex: rand: [null, null, 1] => this will increment the 3rd index by 1
+      if (flattened.typeInfo[path] !== TYPE.NUMBER) {
+        return;
+      }
+
+      transaction.hincrbyfloat(this.getKey(key), path, incrVal);
+    });
 
     return transaction;
   }
