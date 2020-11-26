@@ -5,9 +5,8 @@ Nodejs library to store/retreive JSON Objects in RedisDB
 ## Description
 Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object(with the same types as the original object). 
 
-## What's new in v4.2.0?
-- In response to issue: [#13](https://github.com/AkashBabu/redis-json/issues/13), we now support transactions 🎉 via `setT()`, `rewriteT()` & `delT()` methods.
-- Now `rewrite` method also supports `expiry` options(same as [ISetOptions](./docs/interfaces/isetoptions.md))
+## What's new in v4.3.0?
+- In response to issue: [#17](https://github.com/AkashBabu/redis-json/issues/17), we now support incrementing values with the methods `incr()` & `incrT()`(for transactions)
 
 
 ## Installation
@@ -98,6 +97,8 @@ await jsonCache.clearAll();
 await jsonCache.get('123');
 // undefined
 
+
+await jsonCache.incr('123', {age: 1}) // increments age by 1
 ```
 
 **With custom stringifier and parser:**
