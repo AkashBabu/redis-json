@@ -587,7 +587,7 @@ forEach([
         it('should bind increment to the given transaction', (done) => {
           const transaction = client.multi();
 
-          jsonCache.setT(transaction, 'test1', {age: 25});
+          jsonCache.setT(transaction, 'test1', {age: 25, rand: [1, 2]});
 
           transaction
             .exec(async (err, replies) => {
@@ -596,16 +596,16 @@ forEach([
                 expect(replies.length).to.eq(2);
 
                 const test1: any = await jsonCache.get('test1');
-                expect(deepEq(test1, {age: 25})).to.be.true;
+                expect(deepEq(test1, {age: 25, rand: [1, 2]})).to.be.true;
 
                 const transaction2 = client.multi();
 
-                jsonCache.incrT(transaction2, 'test1', {age: 1} as any);
+                jsonCache.incrT(transaction2, 'test1', {age: 1, rand: [undefined, 1]} as any);
                 transaction2.exec(async (err1) => {
                   if (err1) done(err1);
                   else {
                     const test1_1: any = await jsonCache.get('test1');
-                    expect(deepEq(test1_1, {age: 26})).to.be.true;
+                    expect(deepEq(test1_1, {age: 26, rand: [1, 3]})).to.be.true;
 
                     done();
                   }
