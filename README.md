@@ -28,7 +28,7 @@ const redis = new Redis() as any;
 
 const jsonCache = new JSONCache<{
   name: string;
-  age: 25;
+  age: number;
   address: {
     doorNo: string;
     locality: string;
