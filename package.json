@@ -4,8 +4,7 @@
   "description": "A wrapper library to store JSON Objects in redis-hashsets and retrieve it back as JSON objects",
   "sideEffects": false,
   "main": "lib/jsonCache.js",
-  "unpkg": "dist/dll.js",
-  "module": "es/dll.js",
+  "module": "es/jsonCache.js",
   "typings": "types/src/index.d.ts",
   "scripts": {
     "_test": "cross-env TS_NODE_FILES=true mocha --require ts-node/register test/**/*.spec.ts",
