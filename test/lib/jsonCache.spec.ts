@@ -637,6 +637,24 @@ forEach([
         expect(test.me).to.be.an('object');
         expect(Object.keys(test.me).length).to.be.eql(0);
       });
+
+      it('should accept empty strings as prefix', async () => {
+        const customJsonCache = new JSONCache(client, {prefix: ''});
+        await customJsonCache.set('test', {foo: 'bar'});
+        const storedResult = await customJsonCache.get('test');
+        expect((storedResult as any).foo).to.be.eq('bar');
+
+        await new Promise((resolve, reject) => {
+          client.hgetall('test', (err, result) => {
+            if (err) reject(err);
+            else {
+              expect(result).not.to.be.undefined;
+              expect(result.foo).to.be.eq('bar');
+              resolve(true);
+            }
+          });
+        });
+      });
     });
 
     describe('#input combinations', () => {
