@@ -75,7 +75,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    * @param options Options for controlling the prefix
    */
   constructor(redisClient: any, private options: IOptions = {}) {
-    this.options.prefix = options.prefix || 'jc:';
+    this.options.prefix = typeof options.prefix === 'string' ? options.prefix : 'jc:';
 
     this.redisClientInt = {
       hmset: promisify(redisClient.hmset).bind(redisClient),

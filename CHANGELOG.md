@@ -1,3 +1,6 @@
+# v5.0.0
+* supports empty string as pre-fixes
+
 # v4.3.0
 * adds `.incr()` & `.incrT()` methods to allow incrementing of values using `hincrbyfloat`.
 
