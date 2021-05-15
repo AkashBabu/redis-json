@@ -1,4 +1,5 @@
-import { IObj, IStringifier, IResult, IParser } from '../interfaces';
+import { IObj, IResult } from '../interfaces';
+import type { IStringifier, IParser } from './jsonCache.types';
 
 import { parseKey, encodeKey, splitKey } from '../utils/key';
 import { getTypeOf, getTypedVal, getValueOf, isSkippedType } from '../utils/type';
@@ -6,6 +7,7 @@ import { getTypeOf, getTypedVal, getValueOf, isSkippedType } from '../utils/type
 const getDefaultResult = (): IResult => ({
   data: {},
   typeInfo: {},
+  arrayInfo: {},
 });
 
 /**
@@ -86,6 +88,10 @@ export class Flattener implements IFlattener {
 
   private traverse(target: IObj, basePath: string, result: IResult): IResult {
     if (!(target instanceof Object)) return result;
+
+    if (Array.isArray(target)) {
+      result.arrayInfo[basePath] = true;
+    }
 
     const entries = Object.entries(target);
     if (entries.length > 0) {

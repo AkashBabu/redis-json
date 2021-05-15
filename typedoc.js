@@ -1,7 +1,7 @@
 module.exports = {
   "name": "redis-json",
   "mode": "file",
-  "out": "docs",
+  "out": "docs/api",
   "excludePrivate": true,
   "excludeProtected": true,
   excludeNotExported: true,
@@ -13,4 +13,5 @@ module.exports = {
     "./src/utils/key.ts",
     "./src/lib/Flattener.ts",
   ],
+  ignoreCompilerErrors: true,
 }

@@ -11,6 +11,7 @@
 ### Properties
 
 * [expire](isetoptions.md#optional-expire)
+* [transaction](isetoptions.md#optional-transaction)
 
 ## Properties
 
@@ -18,4 +19,12 @@
 
 • **expire**? : *undefined | number*
 
-Defined in src/interfaces.ts:3
+Defined in src/lib/jsonCache.types.ts:23
+
+___
+
+### `Optional` transaction
+
+• **transaction**? : *[Transaction](../README.md#transaction)*
+
+Defined in src/lib/jsonCache.types.ts:24

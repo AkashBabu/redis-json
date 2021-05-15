@@ -1,3 +1,9 @@
+# v6.0.0
+* improves efficiency by combining multiple commands into one `multi` command
+* fixes code smells
+* replace the entire array when an array is present in the set command
+* removes all `<set|del|rewrite|incr>T` methods and integrates transaction within `<set|del|rewrite|incr>` method itself
+
 # v5.0.0
 * supports empty string as pre-fixes
 

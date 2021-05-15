@@ -1,42 +1,18 @@
 import { promisify } from 'util';
 import { Flattener, IFlattener } from './flattener';
-import { IOptions, ISetOptions, IResult } from '../interfaces';
+import type { IResult, RecursivePartial } from '../interfaces';
 import { TYPE } from '../utils/type';
-
-type IPromisified = (...args: any[]) => Promise<any>;
-
-type Methods = 'hmset' | 'hmget' | 'hgetall' | 'expire' | 'del' | 'scan' | 'hincrbyfloat';
-
-type IRedisMethods = {
-  [K in Methods]: IPromisified;
-};
-
-type IRedisClient = IRedisMethods;
-type Transaction = any;
-
-type RecursivePartial<T> = {
-  [P in keyof T]?:
-    T[P] extends any[] ? Array<RecursivePartial<T[P]>>
-    : T[P] extends any ? RecursivePartial<T[P]>
-    : T[P];
-};
+import type { IOptions, ISetOptions, IDelOptions, IMultiCommands, IRedisClient, Transaction } from './jsonCache.types';
+import Config from './config';
 
 interface IJSONCache<T> {
   set(key: string, obj: T, options: ISetOptions): Promise<any>;
   get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
   rewrite(key: string, obj: T, options?: ISetOptions): Promise<any>;
   clearAll(): Promise<any>;
-  del(key: string): Promise<any>;
-  incr(key: string, obj: RecursivePartial<T>): Promise<any>;
-
-  // Transaction methods
-  setT(transaction: Transaction, key: string, obj: T, options: ISetOptions): Transaction;
-  rewriteT(transaction: Transaction, key: string, obj: T, options?: ISetOptions): Transaction;
-  delT(transaction: Transaction, key: string): Transaction;
-  incrT(transaction: Transaction, key: string, obj: RecursivePartial<T>): Transaction;
+  del(key: string, options?: IDelOptions): Promise<any>;
+  incr(key: string, obj: RecursivePartial<T>, options?: IDelOptions): Promise<any>;
 }
-
-const SCAN_COUNT = 100;
 
 /**
  * JSONCache eases the difficulties in storing a JSON in redis.
@@ -62,6 +38,7 @@ const SCAN_COUNT = 100;
  * field.
  */
 export default class JSONCache<T = any> implements IJSONCache<T> {
+  // Redis Client internal -> Has limited access to commands
   private redisClientInt: IRedisClient;
 
   private flattener: IFlattener;
@@ -85,6 +62,14 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
       del: promisify(redisClient.del).bind(redisClient),
       scan: promisify(redisClient.scan).bind(redisClient),
       hincrbyfloat: promisify(redisClient.hincrbyfloat).bind(redisClient),
+      multi: (commands: IMultiCommands) => {
+        return new Promise((resolve, reject) => {
+          redisClient.multi(commands).exec((err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        });
+      },
     };
 
     this.flattener = new Flattener(options.stringifier, options.parser);
@@ -102,39 +87,17 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
   public async set(key: string, obj: T, options: ISetOptions = {}): Promise<any> {
     const flattened = this.flattener.flatten(obj);
 
-    await Promise.all([
-      this.redisClientInt.hmset(this.getKey(key), flattened.data),
-      this.redisClientInt.hmset(this.getTypeKey(key), flattened.typeInfo),
-    ]);
-    if (options.expire) {
-      await Promise.all([
-        this.redisClientInt.expire(this.getKey(key), options.expire),
-        this.redisClientInt.expire(this.getTypeKey(key), options.expire),
-      ]);
-    }
-  }
+    const commands: IMultiCommands = await this.getKeysToBeRemoved(key, flattened);
 
-  /**
-   * Flattens the given json object and
-   * stores it in Redis hashset using
-   * the given transaction
-   *
-   * @param transaction redis transaction
-   * @param key Redis key
-   * @param obj JSON object to be stored
-   * @param options
-   */
-  public setT(transaction: Transaction, key: string, obj: T, options: ISetOptions = {}): Transaction {
-    const flattened = this.flattener.flatten(obj);
+    commands.push(['hmset', this.getKey(key), flattened.data]);
+    commands.push(['hmset', this.getTypeKey(key), flattened.typeInfo]);
 
-    transaction.hmset(this.getKey(key), flattened.data);
-    transaction.hmset(this.getTypeKey(key), flattened.typeInfo);
     if (options.expire) {
-      transaction.expire(this.getKey(key), options.expire);
-      transaction.expire(this.getTypeKey(key), options.expire);
+      commands.push(['expire', this.getKey(key), options.expire]);
+      commands.push(['expire', this.getTypeKey(key), options.expire]);
     }
 
-    return transaction;
+    await this.execCommand(commands, options.transaction);
   }
 
   /**
@@ -182,7 +145,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
         return res;
       }, { data: {}, typeInfo: {} }) as IResult;
     } else {
-      result = { data, typeInfo };
+      result = { data, typeInfo, arrayInfo: {} };
     }
 
     return this.flattener.unflatten(result) as T;
@@ -194,21 +157,13 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    * @param key Redis key
    * @param obj JSON Object of type T
    */
-  public async rewrite(key: string, obj: T, options?: ISetOptions): Promise<any> {
-    await this.redisClientInt.del(this.getKey(key));
-    await this.set(key, obj, options);
-  }
+  public async rewrite(key: string, obj: T, options: ISetOptions = {}): Promise<any> {
+    const commands: IMultiCommands = [
+      ['del', this.getKey(key)],
+    ];
 
-  /**
-   * Replace the entire hashset for the given key
-   *
-   * @param transaction Redis transaction
-   * @param key Redis key
-   * @param obj JSON Object of type T
-   */
-  public rewriteT(transaction: Transaction, key: string, obj: T, options?: ISetOptions): Transaction {
-    transaction.del(this.getKey(key));
-    return this.setT(transaction, key, obj, options);
+    await this.execCommand(commands, options.transaction);
+    await this.set(key, obj, options);
   }
 
   /**
@@ -220,7 +175,9 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
     let keys: string[];
 
     do {
-      [cursor, keys] = await this.redisClientInt.scan(cursor, 'MATCH', `${this.options.prefix}*`, 'COUNT', SCAN_COUNT);
+      [cursor, keys] = await this.redisClientInt.scan(
+        cursor, 'MATCH', `${this.options.prefix}*`, 'COUNT', Config.SCAN_COUNT,
+      );
 
       if (keys.length > 0) {
         await this.redisClientInt.del(...keys);
@@ -240,32 +197,12 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    *
    * @param key Redis key
    */
-  public async del(key: string): Promise<any> {
-    await Promise.all([
-      this.redisClientInt.del(this.getKey(key)),
-      this.redisClientInt.del(this.getTypeKey(key)),
-    ]);
-  }
-
-  /**
-   * Removes the given key from Redis
-   * using the given transaction
-   *
-   * Please use this method instead of
-   * directly using `redis.del` as this method
-   * ensures that even the corresponding type info
-   * is removed. It also ensures that prefix is
-   * added to key, ensuring no other key is
-   * removed unintentionally
-   *
-   * @param transaction Redis transaction
-   * @param key Redis key
-   */
-  public delT(transaction: Transaction, key: string): Transaction {
-    transaction.del(this.getKey(key));
-    transaction.del(this.getTypeKey(key));
-
-    return transaction;
+  public async del(key: string, options: IDelOptions = {}): Promise<any> {
+    const commands: IMultiCommands = [
+      ['del', this.getKey(key)],
+      ['del', this.getTypeKey(key)],
+    ];
+    await this.execCommand(commands, options.transaction);
   }
 
   /**
@@ -283,26 +220,10 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    * @param obj Partial object specifying the path to the required
    *              variable along with value
    */
-  public async incr(key: string, obj: RecursivePartial<T>): Promise<any> {
+  public async incr(key: string, obj: RecursivePartial<T>, options: IDelOptions = {}): Promise<any> {
     const flattened = this.flattener.flatten(obj);
 
-    await Promise.all(Object.entries(flattened.data).map(([path, incrVal]) => {
-
-      // This check is needed to avoid redis errors.
-      // It also helps while the user wants to increment the value
-      // within an array.
-      // Ex: rand: [null, null, 1] => this will increment the 3rd index by 1
-      if (flattened.typeInfo[path] !== TYPE.NUMBER) {
-        return;
-      }
-
-      return this.redisClientInt.hincrbyfloat(this.getKey(key), path, incrVal);
-    }));
-  }
-
-  public incrT(transaction: Transaction, key: string, obj: RecursivePartial<T>): Transaction {
-    const flattened = this.flattener.flatten(obj);
-
+    const commands: IMultiCommands = [];
     Object.entries(flattened.data).forEach(([path, incrVal]) => {
 
       // This check is needed to avoid redis errors.
@@ -313,15 +234,45 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
         return;
       }
 
-      transaction.hincrbyfloat(this.getKey(key), path, incrVal);
+      commands.push(['hincrbyfloat', this.getKey(key), path, incrVal]);
     });
 
-    return transaction;
+    await this.execCommand(commands, options.transaction);
   }
 
   /******************
    * PRIVATE METHODS
    ******************/
+
+  private async getKeysToBeRemoved(key: string, flattened: IResult): Promise<IMultiCommands> {
+    const commands: IMultiCommands = [];
+
+    // Check if the given obj has arrays and if it does
+    // then we must remove the current array stored in
+    // Cache and then set this array in the Cache
+    if (Object.keys(flattened.arrayInfo).length > 0) {
+      const currentObj = await this.get(key);
+      if (currentObj) {
+        const currrentObjFlattened = this.flattener.flatten(currentObj).data;
+        const keysToBeRemoved: string[] = [];
+
+        // Get all paths matching the parent array path
+        Object.keys(flattened.arrayInfo).forEach(path => {
+          Object.keys(currrentObjFlattened).forEach(objPath => {
+            if (objPath.startsWith(path)) {
+              keysToBeRemoved.push(objPath);
+            }
+          });
+        });
+
+        if (keysToBeRemoved.length > 0) {
+          commands.push(['hdel', this.getKey(key), ...keysToBeRemoved]);
+        }
+      }
+    }
+
+    return commands;
+  }
 
   /**
    * Returns the redis storage key for storing data
@@ -346,4 +297,20 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
     return `${this.options.prefix}${key}_t`;
   }
 
+  private execTransactionCommands(commands: IMultiCommands, transaction: Transaction) {
+    commands.forEach(command => {
+      const [action, ...args] = command;
+      transaction[action](...args);
+    });
+  }
+
+  private async execCommand(commands: IMultiCommands, transaction?: Transaction): Promise<any> {
+    if (transaction) {
+      this.execTransactionCommands(commands, transaction);
+      return transaction;
+    } else {
+      const result = await this.redisClientInt.multi(commands);
+      return result;
+    }
+  }
 }

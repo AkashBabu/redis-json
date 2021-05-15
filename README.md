@@ -1,21 +1,18 @@
 # redis-json [![npm version](https://badge.fury.io/js/redis-json.svg)](https://badge.fury.io/js/redis-json) [![Build Status](https://travis-ci.com/AkashBabu/redis-json.svg?branch=master)](https://travis-ci.com/AkashBabu/redis-json) [![Coverage Status](https://coveralls.io/repos/github/AkashBabu/redis-json/badge.svg?branch=master)](https://coveralls.io/github/AkashBabu/redis-json?branch=master) [![Maintainability](https://api.codeclimate.com/v1/badges/0015747bb31d085adae8/maintainability)](https://codeclimate.com/github/AkashBabu/redis-json/maintainability)
 
-Nodejs library to store/retreive JSON Objects in RedisDB
+Nodejs library to store/retrieve JSON Objects in RedisDB without loosing type information, i.e. WYSIWYG (What You Store Is What You Get)
 
 ## Description
-Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object(with the same types as the original object). 
+Every time `set` is called JSON object is flattened(embeded objects are converted to path keys) and then stored in Redis(just like a normal hashset), on `get` the hashset is unflattened and converted back to the original JSON object(with the same types as was in the original object). 
 
-## What's new in v4.3.0?
-- In response to issue: [#17](https://github.com/AkashBabu/redis-json/issues/17), we now support incrementing values with the methods `incr()` & `incrT()`(for transactions)
+## What's new in v6.0.0?
+- In response to issue: [#24](https://github.com/AkashBabu/redis-json/issues/24), we now replace the array in the cache when array is found in `set` object.
 
-
-## Installation
-
-> npm install redis-json --save
+If you are on V5 then please check this [Migration Guide to V6](docs/migrationV6.md)
 
 ## API
 
-Please visit [this page](docs/README.md) for detailed API documentation.
+Please visit [this page](docs/api/README.md) for detailed API documentation.
 
 ## Usage 
 
@@ -25,16 +22,6 @@ import Redis from 'ioredis';
 import JSONCache from 'redis-json';
 
 const redis = new Redis() as any;
-
-const jsonCache = new JSONCache<{
-  name: string;
-  age: number;
-  address: {
-    doorNo: string;
-    locality: string;
-    pincode: number;
-  }
-}>(redis, {prefix: 'cache:'});
 
 const user = {
   name: 'redis-json',
@@ -46,6 +33,9 @@ const user = {
   },
   cars: ['BMW 520i', 'Audo A8']
 }
+
+const jsonCache = new JSONCache<typeof user>(redis, {prefix: 'cache:'});
+
 
 await jsonCache.set('123', user)
 
@@ -138,22 +128,17 @@ transaction
   .set('name', 'foo')
   .set('bar', 'baz')
 
-jsonCache.setT(transaction, 'test', {name: 'testing'})
-jsonCache.delT(transaction, 'test1')
-jsonCache.rewriteT(transaction, 'test2', {name: 'testing', age: 25})
+await jsonCache.set('test', {name: 'testing'}, {transaction})
+await jsonCache.del('test1', {transaction})
+await jsonCache.rewrite('test2', {name: 'testing', age: 25}, {transaction})
 
 transaction
   .exec(function(err, replies) => {
     /// your logic here after
   })
 ```
-Please note that only `setT()`, `rewriteT()` & `delT()` supports transaction, where as `get()` & `clearAll()` do NOT support transaction because we process those results before returning it to the calling function. Moreover there is no real usecase in adding `get` methods to a transaction!
+Please note that only `set()`, `rewrite()`, `del()` & `incr()` supports transaction, where as `get()` & `clearAll()` do NOT support transaction because we process those results before returning it to the calling function. Moreover there is no real usecase in supporting transaction in `get()` & `clearAll()` methods!
 
-
-
-## Since v4.0.0
-
-Types of the data are retained when retrieved from Redis.
 
 ## Changelogs
 

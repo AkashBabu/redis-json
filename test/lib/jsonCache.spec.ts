@@ -63,7 +63,7 @@ forEach([
     beforeEach(async () => await jsonCache.clearAll());
 
     // Clear only the prefixed keys
-    // after(async () => await jsonCache.clearAll());
+    after(async () => await jsonCache.clearAll());
 
     describe('constructor()', () => {
       it('should support prefix for the store object', async () => {
@@ -197,6 +197,140 @@ forEach([
         expect((response as any).bool).to.be.eql(true);
         expect((response as any).newField).to.be.eql('foo');
       });
+
+      it('should accept arrays as root element', async () => {
+        await jsonCache.set('test', [1, 2]);
+
+        const response = await jsonCache.get('test');
+        expect(response).to.be.an('array');
+        expect(response?.length).to.be.eql(2);
+        expect((response as any)[0]).to.be.eq(1)
+        expect((response as any)[1]).to.be.eq(2)
+      })
+
+      it('should replace entire array as root element', async () => {
+        await jsonCache.set('test', [1, 2]);
+
+        let response = await jsonCache.get('test');
+        expect(response).to.be.an('array');
+        expect(response?.length).to.be.eql(2);
+        expect((response as any)[0]).to.be.eq(1)
+        expect((response as any)[1]).to.be.eq(2)
+
+        await jsonCache.set('test', [3]);
+
+        response = await jsonCache.get('test');
+        expect(response).to.be.an('array');
+        expect(response?.length).to.be.eql(1);
+        expect((response as any)[0]).to.be.eq(3)
+      })
+
+      it('should replace entire array even when nested', async () => {
+        await jsonCache.set('test', {
+          foo: [1, 2, 3, 4]
+        });
+
+        let response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [1, 2, 3, 4]
+        })).to.be.true;
+
+        await jsonCache.set('test', {
+          foo: [5, 6]
+        });
+
+        response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [5, 6]
+        })).to.be.true;
+      })
+
+      it('should replace entire array even when nested', async () => {
+        await jsonCache.set('test', {
+          foo: [1, 2, 3, 4],
+          bar: {
+            baz: [1, {a: 'b'}, 'testing']
+          }
+        });
+
+        let response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [1, 2, 3, 4],
+          bar: {
+            baz: [1, {a: 'b'}, 'testing']
+          }
+        })).to.be.true;
+
+        await jsonCache.set('test', {
+          foo: [5, 6],
+          bar: {
+            baz: [3,4,5]
+          }
+        });
+
+        response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [5, 6],
+          bar: {
+            baz: [3,4,5]
+          }
+        })).to.be.true;
+      })
+
+      it('should only replace the entire array in the specified path', async () => {
+        await jsonCache.set('test', {
+          foo: [1, 2, 3, 4],
+          bar: {
+            baz: [5,6,7]
+          }
+        });
+
+        let response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [1, 2, 3, 4],
+          bar: {
+            baz: [5,6,7]
+          }
+        })).to.be.true;
+
+        await jsonCache.set('test', {
+          bar: {
+            baz: [8,9]
+          }
+        });
+
+        response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [1, 2, 3, 4],
+          bar: {
+            baz: [8,9]
+          }
+        })).to.be.true;
+      })
+
+      it('should be possible to replace multiple nested array in the same command', async () => {
+        await jsonCache.set('test', {
+          foo: [1, 2, 3, 4],
+          bar: [7,8],
+        });
+
+        let response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [1, 2, 3, 4],
+          bar: [7,8],
+        })).to.be.true;
+
+        await jsonCache.set('test', {
+          foo: [5, 6],
+          bar: [10, 11]
+        });
+
+        response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [5, 6],
+          bar: [10, 11]
+        })).to.be.true;
+      })
     });
 
     describe('.get()', () => {
@@ -354,15 +488,6 @@ forEach([
 
     describe('.incr()', () => {
       it('should increment the value by the given amount', async () => {
-        const jc = new JSONCache<{
-          messages: number;
-          profile: {
-            name: string;
-            age: number;
-            rand: number[];
-          }
-        }>(client);
-
         const obj = {
           messages: 10,
           profile: {
@@ -371,6 +496,9 @@ forEach([
             rand: [1, 2, 3],
           },
         };
+
+        const jc = new JSONCache<typeof obj>(client);
+
         await jc.set('test', obj);
 
         let test = await jc.get('test');
@@ -466,17 +594,19 @@ forEach([
     });
 
     describe('transactions', () => {
-      describe('.setT()', () => {
-        it('should bind set to the provided transaction',  (done) => {
+      describe('.set()', () => {
+        it('should bind set to the provided transaction', async () => {
           const transaction = client.multi();
 
-          jsonCache.setT(transaction, 'test1', {name: 'test1'});
-          jsonCache.setT(transaction, 'test2', {name: 'test2'});
+          await jsonCache.set('test1', {name: 'test1'}, {transaction});
+          await jsonCache.set('test2', {name: 'test2'}, {transaction});
 
-          transaction
+
+          await new Promise((res, rej) => {
+            transaction
             .set('name', 'test3')
             .exec(async (err, replies) => {
-              if (err) done(err);
+              if (err) rej(err);
               else {
                 expect(replies.length).to.eq(5);
 
@@ -486,22 +616,24 @@ forEach([
                 expect(test2.name).to.eq('test2');
 
                 client.get('name', (err1, result) => {
-                  if (err1) done(err1);
+                  if (err1) rej(err1);
 
                   expect(result).to.eq('test3');
-                  done();
+                  res(null);
                 });
               }
             });
+          });
         });
-        it('should bind set to the provided transaction with expiry being set',  (done) => {
+        it('should bind set to the provided transaction with expiry being set', async () => {
           const transaction = client.multi();
 
-          jsonCache.setT(transaction, 'test1', {name: 'test1'}, {expire: 1});
+          await jsonCache.set('test1', {name: 'test1'}, {transaction, expire: 1});
 
-          transaction
+          await new Promise((res, rej) => {
+            transaction
             .exec(async (err, replies) => {
-              if (err) done(err);
+              if (err) rej(err);
               else {
                 expect(replies.length).to.eq(4);
 
@@ -513,22 +645,27 @@ forEach([
                 test1 = await jsonCache.get('test1');
                 expect(test1).to.be.undefined;
 
-                done();
+                res(null);
               }
             });
+          });
         });
       });
 
       describe('.delT()', () => {
-        it('should bind del to the provided transaction', (done) => {
+        it('should bind del to the provided transaction', async () => {
           const transaction = client.multi();
 
-          jsonCache.setT(transaction, 'test1', {name: 'test1'});
+          await jsonCache.set('test1', {name: 'test1'}, {transaction});
 
-          transaction
+          console.log('exec 1 command');
+          await new Promise((res, rej) => {
+            transaction
             .exec(async (err, replies) => {
-              if (err) done(err);
+              if (err) rej(err);
               else {
+                console.log('exec 2 command');
+                
                 expect(replies.length).to.eq(2);
 
                 const test1: any = await jsonCache.get('test1');
@@ -536,62 +673,67 @@ forEach([
 
                 const transaction2 = client.multi();
 
-                jsonCache.delT(transaction2, 'test1');
+                await jsonCache.del('test1', {transaction: transaction2});
                 transaction2.exec(async (err1) => {
-                  if (err1) done(err1);
+                  if (err1) rej(err1);
                   else {
                     const test1_1: any = await jsonCache.get('test1');
                     expect(test1_1).to.be.undefined;
 
-                    done();
+                    res(null);
                   }
                 });
               }
             });
+          });
         });
       });
 
       describe('.rewriteT()', () => {
-        it('should bind rewrite to the given transaction', (done) => {
+        it('should bind rewrite to the given transaction', async () => {
           const transaction = client.multi();
 
-          jsonCache.setT(transaction, 'test1', {name: 'test1'});
+          await jsonCache.set('test1', {name: 'test1'}, {transaction});
 
-          transaction
-            .exec(async (err, replies) => {
-              if (err) done(err);
-              else {
-                expect(replies.length).to.eq(2);
+          await new Promise((res, rej) => {
+            transaction
+              .exec(async (err, replies) => {
+                if (err) rej(err);
+                else {
+                  expect(replies.length).to.eq(2);
 
-                const test1: any = await jsonCache.get('test1');
-                expect(deepEq(test1, {name: 'test1'})).to.be.true;
+                  const test1: any = await jsonCache.get('test1');
+                  expect(deepEq(test1, {name: 'test1'})).to.be.true;
 
-                const transaction2 = client.multi();
+                  const transaction2 = client.multi();
 
-                jsonCache.rewriteT(transaction2, 'test1', {age: 25});
-                transaction2.exec(async (err1) => {
-                  if (err1) done(err1);
-                  else {
-                    const test1_1: any = await jsonCache.get('test1');
-                    expect(deepEq(test1_1, {age: 25})).to.be.true;
+                  await jsonCache.rewrite('test1', {age: 25}, {transaction: transaction2});
+                  
+                  transaction2.exec(async (err1) => {
+                    if (err1) rej(err1);
+                    else {
+                      const test1_1: any = await jsonCache.get('test1');
+                      expect(deepEq(test1_1, {age: 25})).to.be.true;
 
-                    done();
-                  }
-                });
-              }
-            });
+                      res(null);
+                    }
+                  });
+                }
+              });
+          });
         });
       });
 
       describe('.incrT()', () => {
-        it('should bind increment to the given transaction', (done) => {
+        it('should bind increment to the given transaction', async () => {
           const transaction = client.multi();
 
-          jsonCache.setT(transaction, 'test1', {age: 25, rand: [1, 2]});
+          await jsonCache.set('test1', {age: 25, rand: [1, 2]}, {transaction});
 
-          transaction
+          await new Promise((res, rej) => {
+            transaction
             .exec(async (err, replies) => {
-              if (err) done(err);
+              if (err) rej(err);
               else {
                 expect(replies.length).to.eq(2);
 
@@ -600,18 +742,20 @@ forEach([
 
                 const transaction2 = client.multi();
 
-                jsonCache.incrT(transaction2, 'test1', {age: 1, rand: [undefined, 1]} as any);
+                await jsonCache.incr('test1', {age: 1, rand: [undefined, 1]} as any, {transaction: transaction2});
+
                 transaction2.exec(async (err1) => {
-                  if (err1) done(err1);
+                  if (err1) rej(err1);
                   else {
                     const test1_1: any = await jsonCache.get('test1');
                     expect(deepEq(test1_1, {age: 26, rand: [1, 3]})).to.be.true;
 
-                    done();
+                    res(null);
                   }
                 });
               }
             });
+          })
         });
       });
     });

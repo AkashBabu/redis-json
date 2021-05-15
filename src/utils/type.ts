@@ -1,4 +1,4 @@
-import { IStringifier, IParser } from '../interfaces';
+import type { IStringifier, IParser } from '../lib/jsonCache.types';
 
 export enum TYPE {
   OBJECT = '0',
