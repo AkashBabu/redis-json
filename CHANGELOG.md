@@ -1,3 +1,6 @@
+# v6.0.1
+* adds function overload definition for `get` as `get(key: string): Promise<T|undefined>`
+
 # v6.0.0
 * improves efficiency by combining multiple commands into one `multi` command
 * fixes code smells

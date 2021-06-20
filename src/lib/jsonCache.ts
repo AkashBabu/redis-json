@@ -7,7 +7,10 @@ import Config from './config';
 
 interface IJSONCache<T> {
   set(key: string, obj: T, options: ISetOptions): Promise<any>;
+
+  get(key: string): Promise<T | undefined>;
   get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
+
   rewrite(key: string, obj: T, options?: ISetOptions): Promise<any>;
   clearAll(): Promise<any>;
   del(key: string, options?: IDelOptions): Promise<any>;
@@ -111,6 +114,8 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    *
    * @returns request object from the cache
    */
+  public async get(key: string): Promise<T | undefined>;
+  public async get(key: string, ...fields: string[]): Promise<Partial<T> | undefined>;
   public async get(key: string, ...fields: string[]): Promise<Partial<T> | undefined> {
     const [data, typeInfo] = await Promise.all([
       this.redisClientInt.hgetall(this.getKey(key)),

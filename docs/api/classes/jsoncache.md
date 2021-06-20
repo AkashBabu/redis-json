@@ -57,7 +57,7 @@ field.
 
 \+ **new JSONCache**(`redisClient`: any, `options`: [IOptions](../interfaces/ioptions.md)): *[JSONCache](jsoncache.md)*
 
-Defined in src/lib/jsonCache.ts:44
+Defined in src/lib/jsonCache.ts:47
 
 Intializes JSONCache instance
 
@@ -76,7 +76,7 @@ Name | Type | Default | Description |
 
 ▸ **clearAll**(): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:173
+Defined in src/lib/jsonCache.ts:178
 
 Removes/deletes all the keys in the JSON Cache,
 having the prefix.
@@ -89,7 +89,7 @@ ___
 
 ▸ **del**(`key`: string, `options`: [IDelOptions](../interfaces/ideloptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:200
+Defined in src/lib/jsonCache.ts:205
 
 Removes the given key from Redis
 
@@ -113,9 +113,9 @@ ___
 
 ###  get
 
-▸ **get**(`key`: string, ...`fields`: string[]): *Promise‹Partial‹T› | undefined›*
+▸ **get**(`key`: string): *Promise‹T | undefined›*
 
-Defined in src/lib/jsonCache.ts:114
+Defined in src/lib/jsonCache.ts:117
 
 Retrieves the hashset from redis and
 unflattens it back to the original Object
@@ -125,11 +125,23 @@ unflattens it back to the original Object
 Name | Type | Description |
 ------ | ------ | ------ |
 `key` | string | Redis key |
-`...fields` | string[] | List of fields to be retreived from redis.    This helps reduce network latency incase only a few fields are    needed.  |
 
-**Returns:** *Promise‹Partial‹T› | undefined›*
+**Returns:** *Promise‹T | undefined›*
 
 request object from the cache
+
+▸ **get**(`key`: string, ...`fields`: string[]): *Promise‹Partial‹T› | undefined›*
+
+Defined in src/lib/jsonCache.ts:118
+
+**Parameters:**
+
+Name | Type |
+------ | ------ |
+`key` | string |
+`...fields` | string[] |
+
+**Returns:** *Promise‹Partial‹T› | undefined›*
 
 ___
 
@@ -137,7 +149,7 @@ ___
 
 ▸ **incr**(`key`: string, `obj`: RecursivePartial‹T›, `options`: [IDelOptions](../interfaces/ideloptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:223
+Defined in src/lib/jsonCache.ts:228
 
 Increments the value of a variable in the JSON
 Note: You can increment multiple variables in the
@@ -165,7 +177,7 @@ ___
 
 ▸ **rewrite**(`key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:160
+Defined in src/lib/jsonCache.ts:165
 
 Replace the entire hashset for the given key
 
@@ -185,7 +197,7 @@ ___
 
 ▸ **set**(`key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:87
+Defined in src/lib/jsonCache.ts:90
 
 Flattens the given json object and
 stores it in Redis hashset
