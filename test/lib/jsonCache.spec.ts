@@ -204,9 +204,9 @@ forEach([
         const response = await jsonCache.get('test');
         expect(response).to.be.an('array');
         expect(response?.length).to.be.eql(2);
-        expect((response as any)[0]).to.be.eq(1)
-        expect((response as any)[1]).to.be.eq(2)
-      })
+        expect((response as any)[0]).to.be.eq(1);
+        expect((response as any)[1]).to.be.eq(2);
+      });
 
       it('should replace entire array as root element', async () => {
         await jsonCache.set('test', [1, 2]);
@@ -214,123 +214,123 @@ forEach([
         let response = await jsonCache.get('test');
         expect(response).to.be.an('array');
         expect(response?.length).to.be.eql(2);
-        expect((response as any)[0]).to.be.eq(1)
-        expect((response as any)[1]).to.be.eq(2)
+        expect((response as any)[0]).to.be.eq(1);
+        expect((response as any)[1]).to.be.eq(2);
 
         await jsonCache.set('test', [3]);
 
         response = await jsonCache.get('test');
         expect(response).to.be.an('array');
         expect(response?.length).to.be.eql(1);
-        expect((response as any)[0]).to.be.eq(3)
-      })
-
-      it('should replace entire array even when nested', async () => {
-        await jsonCache.set('test', {
-          foo: [1, 2, 3, 4]
-        });
-
-        let response = await jsonCache.get('test');
-        expect(deepEq(response, {
-          foo: [1, 2, 3, 4]
-        })).to.be.true;
-
-        await jsonCache.set('test', {
-          foo: [5, 6]
-        });
-
-        response = await jsonCache.get('test');
-        expect(deepEq(response, {
-          foo: [5, 6]
-        })).to.be.true;
-      })
+        expect((response as any)[0]).to.be.eq(3);
+      });
 
       it('should replace entire array even when nested', async () => {
         await jsonCache.set('test', {
           foo: [1, 2, 3, 4],
-          bar: {
-            baz: [1, {a: 'b'}, 'testing']
-          }
         });
 
         let response = await jsonCache.get('test');
         expect(deepEq(response, {
           foo: [1, 2, 3, 4],
+        })).to.be.true;
+
+        await jsonCache.set('test', {
+          foo: [5, 6],
+        });
+
+        response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [5, 6],
+        })).to.be.true;
+      });
+
+      it('should replace entire array even when nested', async () => {
+        await jsonCache.set('test', {
+          foo: [1, 2, 3, 4],
           bar: {
-            baz: [1, {a: 'b'}, 'testing']
-          }
+            baz: [1, {a: 'b'}, 'testing'],
+          },
+        });
+
+        let response = await jsonCache.get('test');
+        expect(deepEq(response, {
+          foo: [1, 2, 3, 4],
+          bar: {
+            baz: [1, {a: 'b'}, 'testing'],
+          },
         })).to.be.true;
 
         await jsonCache.set('test', {
           foo: [5, 6],
           bar: {
-            baz: [3,4,5]
-          }
+            baz: [3, 4, 5],
+          },
         });
 
         response = await jsonCache.get('test');
         expect(deepEq(response, {
           foo: [5, 6],
           bar: {
-            baz: [3,4,5]
-          }
+            baz: [3, 4, 5],
+          },
         })).to.be.true;
-      })
+      });
 
       it('should only replace the entire array in the specified path', async () => {
         await jsonCache.set('test', {
           foo: [1, 2, 3, 4],
           bar: {
-            baz: [5,6,7]
-          }
+            baz: [5, 6, 7],
+          },
         });
 
         let response = await jsonCache.get('test');
         expect(deepEq(response, {
           foo: [1, 2, 3, 4],
           bar: {
-            baz: [5,6,7]
-          }
+            baz: [5, 6, 7],
+          },
         })).to.be.true;
 
         await jsonCache.set('test', {
           bar: {
-            baz: [8,9]
-          }
+            baz: [8, 9],
+          },
         });
 
         response = await jsonCache.get('test');
         expect(deepEq(response, {
           foo: [1, 2, 3, 4],
           bar: {
-            baz: [8,9]
-          }
+            baz: [8, 9],
+          },
         })).to.be.true;
-      })
+      });
 
       it('should be possible to replace multiple nested array in the same command', async () => {
         await jsonCache.set('test', {
           foo: [1, 2, 3, 4],
-          bar: [7,8],
+          bar: [7, 8],
         });
 
         let response = await jsonCache.get('test');
         expect(deepEq(response, {
           foo: [1, 2, 3, 4],
-          bar: [7,8],
+          bar: [7, 8],
         })).to.be.true;
 
         await jsonCache.set('test', {
           foo: [5, 6],
-          bar: [10, 11]
+          bar: [10, 11],
         });
 
         response = await jsonCache.get('test');
         expect(deepEq(response, {
           foo: [5, 6],
-          bar: [10, 11]
+          bar: [10, 11],
         })).to.be.true;
-      })
+      });
     });
 
     describe('.get()', () => {
@@ -601,7 +601,6 @@ forEach([
           await jsonCache.set('test1', {name: 'test1'}, {transaction});
           await jsonCache.set('test2', {name: 'test2'}, {transaction});
 
-
           await new Promise((res, rej) => {
             transaction
             .set('name', 'test3')
@@ -665,7 +664,7 @@ forEach([
               if (err) rej(err);
               else {
                 console.log('exec 2 command');
-                
+
                 expect(replies.length).to.eq(2);
 
                 const test1: any = await jsonCache.get('test1');
@@ -708,7 +707,7 @@ forEach([
                   const transaction2 = client.multi();
 
                   await jsonCache.rewrite('test1', {age: 25}, {transaction: transaction2});
-                  
+
                   transaction2.exec(async (err1) => {
                     if (err1) rej(err1);
                     else {
@@ -755,7 +754,7 @@ forEach([
                 });
               }
             });
-          })
+          });
         });
       });
     });
@@ -780,6 +779,15 @@ forEach([
         expect(test).to.be.an('object');
         expect(test.me).to.be.an('object');
         expect(Object.keys(test.me).length).to.be.eql(0);
+      });
+
+      it('should allow empty arrays at the root', async () => {
+        await jsonCache.set('123', []);
+
+        const test: any = await jsonCache.get('123');
+
+        expect(test).to.be.an('array');
+        expect(test.length).to.be.eq(0);
       });
 
       it('should accept empty strings as prefix', async () => {
