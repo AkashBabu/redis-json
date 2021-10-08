@@ -92,14 +92,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
 
     const commands: IMultiCommands = await this.getKeysToBeRemoved(key, flattened);
 
-    commands.push(['hmset', this.getKey(key), flattened.data]);
-    commands.push(['hmset', this.getTypeKey(key), flattened.typeInfo]);
-
-    if (options.expire) {
-      commands.push(['expire', this.getKey(key), options.expire]);
-      commands.push(['expire', this.getTypeKey(key), options.expire]);
-    }
-
+    this.addSetCommands(key, flattened, commands, options.expire);
     await this.execCommand(commands, options.transaction);
   }
 
@@ -125,9 +118,13 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
     // Empty object is returned when
     // the given key is not present
     // in the cache
-    if (!data || Object.keys(data).length === 0) {
+    if (!(data && typeInfo)) {
       return undefined;
     }
+
+    const dataKeysLen = Object.keys(data).length;
+    const typeInfoKeysLen = Object.keys(typeInfo).length;
+    if (dataKeysLen !== typeInfoKeysLen || dataKeysLen === 0 ) return undefined;
 
     let result: IResult;
     if (fields.length > 0) {
@@ -165,10 +162,12 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
   public async rewrite(key: string, obj: T, options: ISetOptions = {}): Promise<any> {
     const commands: IMultiCommands = [
       ['del', this.getKey(key)],
+      ['del', this.getTypeKey(key)],
     ];
 
+    const flattened = this.flattener.flatten(obj);
+    this.addSetCommands(key, flattened, commands, options.expire);
     await this.execCommand(commands, options.transaction);
-    await this.set(key, obj, options);
   }
 
   /**
@@ -272,6 +271,7 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
 
         if (keysToBeRemoved.length > 0) {
           commands.push(['hdel', this.getKey(key), ...keysToBeRemoved]);
+          commands.push(['hdel', this.getTypeKey(key), ...keysToBeRemoved]);
         }
       }
     }
@@ -300,6 +300,28 @@ export default class JSONCache<T = any> implements IJSONCache<T> {
    */
   private getTypeKey(key: string): string {
     return `${this.options.prefix}${key}_t`;
+  }
+
+  /**
+   * Will add Set commands to the given array
+   * This logic was separated to remove code duplication
+   * in set & rewrite methods
+   *
+   * @param key Storage key
+   * @param flattened Flattened object containing data & typeInfo
+   * @param commands List of commands to which set commands has to be appended
+   * @param expire Redis Key expiry
+   */
+  private addSetCommands(key: string, flattened: IResult, commands: IMultiCommands, expire?: number): IMultiCommands {
+    commands.push(['hmset', this.getKey(key), flattened.data]);
+    commands.push(['hmset', this.getTypeKey(key), flattened.typeInfo]);
+
+    if (expire) {
+      commands.push(['expire', this.getKey(key), expire]);
+      commands.push(['expire', this.getTypeKey(key), expire]);
+    }
+
+    return commands;
   }
 
   private execTransactionCommands(commands: IMultiCommands, transaction: Transaction) {

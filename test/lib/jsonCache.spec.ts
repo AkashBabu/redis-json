@@ -657,14 +657,11 @@ forEach([
 
           await jsonCache.set('test1', {name: 'test1'}, {transaction});
 
-          console.log('exec 1 command');
           await new Promise((res, rej) => {
             transaction
             .exec(async (err, replies) => {
               if (err) rej(err);
               else {
-                console.log('exec 2 command');
-
                 expect(replies.length).to.eq(2);
 
                 const test1: any = await jsonCache.get('test1');
@@ -712,6 +709,7 @@ forEach([
                     if (err1) rej(err1);
                     else {
                       const test1_1: any = await jsonCache.get('test1');
+
                       expect(deepEq(test1_1, {age: 25})).to.be.true;
 
                       res(null);
@@ -782,12 +780,54 @@ forEach([
       });
 
       it('should allow empty arrays at the root', async () => {
-        await jsonCache.set('123', []);
+        let data: any = [];
 
-        const test: any = await jsonCache.get('123');
+        await jsonCache.set('123', data);
 
-        expect(test).to.be.an('array');
-        expect(test.length).to.be.eq(0);
+        let result: any = await jsonCache.get('123');
+        expect(result).to.be.an('array');
+        expect(result.length).to.be.eq(0);
+
+        data.push(0);
+        await jsonCache.set('123', data);
+        result = await jsonCache.get('123');
+        expect(result).to.be.an('array');
+        expect(result.length).to.be.eq(1);
+        expect(result[0]).to.be.eq(0);
+
+        data.pop();
+        await jsonCache.set('123', data);
+        result = await jsonCache.get('123');
+        expect(result).to.be.an('array');
+        expect(result.length).to.be.eq(0);
+
+        data.push(1, 2);
+        data.length = 0;
+        await jsonCache.set('123', data);
+        result = await jsonCache.get('123');
+        expect(result).to.be.an('array');
+        expect(result.length).to.be.eq(0);
+
+        data = {
+          a: 1,
+        };
+        await jsonCache.set('123', data);
+        result = await jsonCache.get('123');
+        expect(result).to.be.an('object');
+        expect(result.a).to.be.eq(1);
+
+        data = [];
+        await jsonCache.set('123', data);
+        result = await jsonCache.get('123');
+        expect(result).to.be.an('array');
+        expect(result.length).to.be.eq(0);
+
+        data = [{a: 1}];
+        await jsonCache.set('123', data);
+        result = await jsonCache.get('123');
+        expect(result).to.be.an('array');
+        expect(result.length).to.be.eq(1);
+        expect(result[0].a).to.be.eq(1);
       });
 
       it('should accept empty strings as prefix', async () => {

@@ -76,7 +76,7 @@ Name | Type | Default | Description |
 
 ▸ **clearAll**(): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:178
+Defined in src/lib/jsonCache.ts:177
 
 Removes/deletes all the keys in the JSON Cache,
 having the prefix.
@@ -89,7 +89,7 @@ ___
 
 ▸ **del**(`key`: string, `options`: [IDelOptions](../interfaces/ideloptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:205
+Defined in src/lib/jsonCache.ts:204
 
 Removes the given key from Redis
 
@@ -115,7 +115,7 @@ ___
 
 ▸ **get**(`key`: string): *Promise‹T | undefined›*
 
-Defined in src/lib/jsonCache.ts:117
+Defined in src/lib/jsonCache.ts:110
 
 Retrieves the hashset from redis and
 unflattens it back to the original Object
@@ -132,7 +132,7 @@ request object from the cache
 
 ▸ **get**(`key`: string, ...`fields`: string[]): *Promise‹Partial‹T› | undefined›*
 
-Defined in src/lib/jsonCache.ts:118
+Defined in src/lib/jsonCache.ts:111
 
 **Parameters:**
 
@@ -149,7 +149,7 @@ ___
 
 ▸ **incr**(`key`: string, `obj`: RecursivePartial‹T›, `options`: [IDelOptions](../interfaces/ideloptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:228
+Defined in src/lib/jsonCache.ts:227
 
 Increments the value of a variable in the JSON
 Note: You can increment multiple variables in the
@@ -177,7 +177,7 @@ ___
 
 ▸ **rewrite**(`key`: string, `obj`: T, `options`: [ISetOptions](../interfaces/isetoptions.md)): *Promise‹any›*
 
-Defined in src/lib/jsonCache.ts:165
+Defined in src/lib/jsonCache.ts:162
 
 Replace the entire hashset for the given key
 
