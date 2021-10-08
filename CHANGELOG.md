@@ -1,3 +1,6 @@
+# v6.0.2
+* minor bug fixes and performance improvements
+
 # v6.0.1
 * adds function overload definition for `get` as `get(key: string): Promise<T|undefined>`
 
