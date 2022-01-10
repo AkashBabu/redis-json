@@ -11,7 +11,7 @@
 export function parseKey(key: string): string | number {
   const numKey = Number(key);
 
-  return isNaN(numKey) ? decodeKey(key) : numKey;
+  return isNaN(numKey) || isHex(key) ? decodeKey(key) : numKey;
 }
 
 /**
@@ -48,3 +48,12 @@ export const splitKey = (() => {
     return key.split(keySplitReg);
   };
 })();
+
+/**
+ * Checks the key is hex string or not.
+ *
+ * @param key
+ */
+ function isHex(key: string): boolean {
+    return key ? Boolean(key.match(/^0x[0-9a-f]+$/i)) : false;
+  }
