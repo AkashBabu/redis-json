@@ -22,6 +22,11 @@ describe('#utils/key', () => {
       const key = 'helloworld';
       expect(parseKey(key)).to.be.eql('helloworld');
     });
+
+    it('should return the given key as a string, if the key is a hex string', () => {
+        const key = '0x1a2b3c';
+        expect(parseKey(key)).to.be.eql('0x1a2b3c');
+      });
   });
 
   describe('#encodeKey', () => {
